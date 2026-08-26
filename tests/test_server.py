@@ -81,7 +81,7 @@ async def test_openplc_tools_use_current_project_layout(client: Client, tmp_path
     assert structure.structured_content["type"] == "plc-project"
     assert "pous/programs/main.st" in structure.structured_content["files"]
     assert "pous/function-blocks/Motor.st" in structure.structured_content["files"]
-    assert "pous/function-blocks/Motor.json" not in structure.structured_content["files"]
+    assert "pous/function-blocks/Motor.json" in structure.structured_content["files"]
 
     pous = await client.call_tool("list_pous", {"project_path": str(project)})
     assert not pous.is_error
@@ -103,7 +103,45 @@ async def test_openplc_tools_use_current_project_layout(client: Client, tmp_path
 
 
 @pytest.mark.anyio
-@pytest.mark.parametrize("project_type", ["plc-project", "plc-library"])
+async def test_json_only_pou_is_supported(client: Client, tmp_path: Path) -> None:
+    project = make_project(tmp_path / "project")
+    (project / "pous" / "function-blocks" / "Motor.st").unlink()
+
+    pous = await client.call_tool("list_pous", {"project_path": str(project)})
+    assert not pous.is_error
+    assert pous.structured_content is not None
+    motor = next(pou for pou in pous.structured_content["result"] if pou["name"] == "Motor")
+    assert motor == {
+        "name": "Motor",
+        "type": "function-block",
+        "language": None,
+        "path": "pous/function-blocks/Motor.json",
+    }
+
+
+@pytest.mark.anyio
+async def test_pou_names_are_deduplicated_globally(client: Client, tmp_path: Path) -> None:
+    project = make_project(tmp_path / "project")
+    (project / "pous" / "programs" / "Motor.st").write_text(
+        "PROGRAM Motor\nEND_PROGRAM\n", encoding="utf-8"
+    )
+
+    pous = await client.call_tool("list_pous", {"project_path": str(project)})
+    assert not pous.is_error
+    assert pous.structured_content is not None
+    motors = [pou for pou in pous.structured_content["result"] if pou["name"] == "Motor"]
+    assert motors == [
+        {
+            "name": "Motor",
+            "type": "function-block",
+            "language": "st",
+            "path": "pous/function-blocks/Motor.st",
+        }
+    ]
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize("project_type", ["plc-project", "plc-library", "PLC"])
 async def test_accepted_project_types(client: Client, tmp_path: Path, project_type: str) -> None:
     project = make_project(tmp_path / "project", project_type=project_type)
     result = await client.call_tool("get_project_structure", {"project_path": str(project)})
