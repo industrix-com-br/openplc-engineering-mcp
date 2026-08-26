@@ -54,21 +54,12 @@ async def test_server_and_tools_are_discoverable(client: Client) -> None:
     assert isinstance(mcp, MCPServer)
     listed = await client.list_tools()
     assert {tool.name for tool in listed.tools} == {
-        "get_server_info",
         "get_project_structure",
         "list_pous",
         "validate_project",
     }
     assert all(tool.annotations and tool.annotations.read_only_hint for tool in listed.tools)
-
-
-@pytest.mark.anyio
-async def test_get_server_info_can_be_called(client: Client) -> None:
-    result = await client.call_tool("get_server_info", {})
-    assert not result.is_error
-    assert result.structured_content is not None
-    assert result.structured_content["name"] == "openplc-engineering"
-    assert result.structured_content["write_operations"] is False
+    assert all(tool.annotations and tool.annotations.open_world_hint is False for tool in listed.tools)
 
 
 @pytest.mark.anyio
