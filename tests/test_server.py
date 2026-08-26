@@ -4,8 +4,14 @@ from pathlib import Path
 import pytest
 from mcp import Client
 from mcp.server import MCPServer
+from mcp.types import CallToolResult, TextContent
 
 from openplc_engineering_mcp.server import mcp
+
+
+def tool_text(result: CallToolResult) -> str:
+    assert result.content
+    return TextContent.model_validate(result.content[0]).text
 
 
 @pytest.fixture
@@ -19,18 +25,16 @@ async def client():
         yield connected
 
 
-def make_project(root: Path) -> Path:
+def make_project(root: Path, *, project_type: str = "plc-project") -> Path:
     (root / "pous" / "programs").mkdir(parents=True)
     (root / "pous" / "function-blocks").mkdir(parents=True)
     (root / "devices").mkdir()
     (root / "project.json").write_text(
         json.dumps(
             {
-                "meta": {"name": "Example", "type": "plc-project"},
+                "meta": {"name": "Example", "type": project_type},
                 "data": {
-                    "configuration": {
-                        "resource": {"tasks": [], "instances": [], "globalVariables": []}
-                    }
+                    "configuration": {"resource": {"tasks": [], "instances": [], "globalVariables": []}}
                 },
             }
         ),
@@ -74,7 +78,10 @@ async def test_openplc_tools_use_current_project_layout(client: Client, tmp_path
     assert not structure.is_error
     assert structure.structured_content is not None
     assert structure.structured_content["name"] == "Example"
+    assert structure.structured_content["type"] == "plc-project"
     assert "pous/programs/main.st" in structure.structured_content["files"]
+    assert "pous/function-blocks/Motor.st" in structure.structured_content["files"]
+    assert "pous/function-blocks/Motor.json" not in structure.structured_content["files"]
 
     pous = await client.call_tool("list_pous", {"project_path": str(project)})
     assert not pous.is_error
@@ -96,11 +103,36 @@ async def test_openplc_tools_use_current_project_layout(client: Client, tmp_path
 
 
 @pytest.mark.anyio
+@pytest.mark.parametrize("project_type", ["plc-project", "plc-library"])
+async def test_accepted_project_types(client: Client, tmp_path: Path, project_type: str) -> None:
+    project = make_project(tmp_path / "project", project_type=project_type)
+    result = await client.call_tool("get_project_structure", {"project_path": str(project)})
+    assert not result.is_error
+    assert result.structured_content["type"] == project_type
+
+
+@pytest.mark.anyio
+async def test_a_meta_only_project_is_recognized(client: Client, tmp_path: Path) -> None:
+    project = tmp_path / "project"
+    project.mkdir()
+    (project / "project.json").write_text(
+        json.dumps({"meta": {"name": "Minimal", "type": "plc-project"}}), encoding="utf-8"
+    )
+
+    result = await client.call_tool("get_project_structure", {"project_path": str(project)})
+    assert not result.is_error
+    assert result.structured_content["name"] == "Minimal"
+    assert result.structured_content["files"] == ["project.json"]
+
+
+@pytest.mark.anyio
 @pytest.mark.parametrize("tool_name", ["get_project_structure", "list_pous"])
-async def test_invalid_project_path_returns_tool_error(client: Client, tmp_path: Path, tool_name: str) -> None:
+async def test_invalid_project_path_returns_tool_error(
+    client: Client, tmp_path: Path, tool_name: str
+) -> None:
     result = await client.call_tool(tool_name, {"project_path": str(tmp_path / "missing")})
     assert result.is_error
-    assert "does not exist" in result.content[0].text
+    assert "does not exist" in tool_text(result)
 
 
 @pytest.mark.anyio
@@ -110,18 +142,35 @@ async def test_project_path_must_be_directory(client: Client, tmp_path: Path) ->
 
     result = await client.call_tool("get_project_structure", {"project_path": str(project_file)})
     assert result.is_error
-    assert "not a directory" in result.content[0].text
+    assert "not a directory" in tool_text(result)
 
 
 @pytest.mark.anyio
-async def test_project_json_must_include_data_object(client: Client, tmp_path: Path) -> None:
+async def test_missing_project_json_is_rejected(client: Client, tmp_path: Path) -> None:
+    result = await client.call_tool("get_project_structure", {"project_path": str(tmp_path)})
+    assert result.is_error
+    assert "does not contain project.json" in tool_text(result)
+
+
+@pytest.mark.anyio
+async def test_invalid_project_json_is_rejected(client: Client, tmp_path: Path) -> None:
+    project = tmp_path / "project"
+    project.mkdir()
+    (project / "project.json").write_text("{not-json", encoding="utf-8")
+
+    result = await client.call_tool("get_project_structure", {"project_path": str(project)})
+    assert result.is_error
+    assert "not valid JSON" in tool_text(result)
+
+
+@pytest.mark.anyio
+async def test_unsupported_meta_type_is_rejected(client: Client, tmp_path: Path) -> None:
     project = tmp_path / "project"
     project.mkdir()
     (project / "project.json").write_text(
-        json.dumps({"meta": {"name": "Invalid", "type": "plc-project"}}),
-        encoding="utf-8",
+        json.dumps({"meta": {"name": "X", "type": "something-else"}}), encoding="utf-8"
     )
 
     result = await client.call_tool("get_project_structure", {"project_path": str(project)})
     assert result.is_error
-    assert "project.json data must be an object" in result.content[0].text
+    assert "unsupported project.json meta.type" in tool_text(result)

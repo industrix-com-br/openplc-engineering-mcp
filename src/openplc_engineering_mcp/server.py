@@ -16,7 +16,6 @@ def get_server_info() -> dict[str, object]:
         "name": "openplc-engineering",
         "status": "experimental",
         "transport": "stdio",
-        "tools": ["get_server_info", "get_project_structure", "list_pous"],
         "write_operations": False,
     }
 
