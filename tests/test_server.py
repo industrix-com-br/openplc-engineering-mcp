@@ -27,7 +27,11 @@ def make_project(root: Path) -> Path:
         json.dumps(
             {
                 "meta": {"name": "Example", "type": "plc-project"},
-                "data": {},
+                "data": {
+                    "configuration": {
+                        "resource": {"tasks": [], "instances": [], "globalVariables": []}
+                    }
+                },
             }
         ),
         encoding="utf-8",
@@ -92,7 +96,32 @@ async def test_openplc_tools_use_current_project_layout(client: Client, tmp_path
 
 
 @pytest.mark.anyio
-async def test_invalid_project_path_returns_tool_error(client: Client, tmp_path: Path) -> None:
-    result = await client.call_tool("get_project_structure", {"project_path": str(tmp_path / "missing")})
+@pytest.mark.parametrize("tool_name", ["get_project_structure", "list_pous"])
+async def test_invalid_project_path_returns_tool_error(client: Client, tmp_path: Path, tool_name: str) -> None:
+    result = await client.call_tool(tool_name, {"project_path": str(tmp_path / "missing")})
     assert result.is_error
     assert "does not exist" in result.content[0].text
+
+
+@pytest.mark.anyio
+async def test_project_path_must_be_directory(client: Client, tmp_path: Path) -> None:
+    project_file = tmp_path / "project.json"
+    project_file.write_text("{}", encoding="utf-8")
+
+    result = await client.call_tool("get_project_structure", {"project_path": str(project_file)})
+    assert result.is_error
+    assert "not a directory" in result.content[0].text
+
+
+@pytest.mark.anyio
+async def test_project_json_must_include_data_object(client: Client, tmp_path: Path) -> None:
+    project = tmp_path / "project"
+    project.mkdir()
+    (project / "project.json").write_text(
+        json.dumps({"meta": {"name": "Invalid", "type": "plc-project"}}),
+        encoding="utf-8",
+    )
+
+    result = await client.call_tool("get_project_structure", {"project_path": str(project)})
+    assert result.is_error
+    assert "project.json data must be an object" in result.content[0].text

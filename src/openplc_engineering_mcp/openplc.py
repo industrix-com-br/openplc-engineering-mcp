@@ -1,6 +1,6 @@
 import json
 from pathlib import Path
-from typing import Literal, TypedDict
+from typing import Literal, TypedDict, cast
 
 from mcp.server.mcpserver.exceptions import ToolError
 
@@ -38,7 +38,7 @@ _POU_LANGUAGES = {
 }
 
 
-def _load_project(project_path: str) -> tuple[Path, dict[str, object]]:
+def _load_project(project_path: str) -> tuple[Path, str, ProjectType]:
     if not project_path.strip():
         raise ToolError("project_path must not be empty")
 
@@ -53,7 +53,12 @@ def _load_project(project_path: str) -> tuple[Path, dict[str, object]]:
         raise ToolError(f'OpenPLC project not recognized: "{root}" does not contain project.json')
 
     try:
-        project = json.loads(project_file.read_text(encoding="utf-8"))
+        content = project_file.read_text(encoding="utf-8")
+    except (OSError, UnicodeError) as exc:
+        raise ToolError(f"Could not read project.json: {exc}") from exc
+
+    try:
+        project = json.loads(content)
     except json.JSONDecodeError as exc:
         raise ToolError(f"project.json is not valid JSON: {exc.msg}") from exc
 
@@ -71,7 +76,25 @@ def _load_project(project_path: str) -> tuple[Path, dict[str, object]]:
     if project_type not in {"plc-project", "plc-library", "PLC"}:
         raise ToolError("OpenPLC project not recognized: unsupported project.json meta.type")
 
-    return root, project
+    data = project.get("data")
+    if not isinstance(data, dict):
+        raise ToolError("OpenPLC project not recognized: project.json data must be an object")
+
+    configuration = data.get("configuration")
+    if not isinstance(configuration, dict):
+        raise ToolError("OpenPLC project not recognized: project.json data.configuration must be an object")
+
+    resource = configuration.get("resource")
+    if not isinstance(resource, dict):
+        raise ToolError("OpenPLC project not recognized: project.json data.configuration.resource must be an object")
+
+    for field in ("tasks", "instances", "globalVariables"):
+        if not isinstance(resource.get(field), list):
+            raise ToolError(
+                f"OpenPLC project not recognized: project.json data.configuration.resource.{field} must be an array"
+            )
+
+    return root, name, cast(ProjectType, project_type)
 
 
 def _recognized_files(root: Path, relative_dir: str, extensions: set[str]) -> list[str]:
@@ -88,9 +111,7 @@ def _recognized_files(root: Path, relative_dir: str, extensions: set[str]) -> li
 
 def get_project_structure(project_path: str) -> ProjectStructure:
     """Inspect the relevant on-disk structure of an OpenPLC Editor project."""
-    root, project = _load_project(project_path)
-    meta = project["meta"]
-    assert isinstance(meta, dict)
+    root, name, project_type = _load_project(project_path)
 
     files = ["project.json"]
     for relative_path in ("library.json", "devices/configuration.json", "devices/pin-mapping.json"):
@@ -107,15 +128,15 @@ def get_project_structure(project_path: str) -> ProjectStructure:
 
     return {
         "path": str(root),
-        "name": str(meta["name"]),
-        "type": meta["type"],  # type: ignore[typeddict-item]
+        "name": name,
+        "type": project_type,
         "files": sorted(set(files)),
     }
 
 
 def list_pous(project_path: str) -> list[PouInfo]:
     """List POUs recognized by the current OpenPLC Editor project layout."""
-    root, _ = _load_project(project_path)
+    root, _, _ = _load_project(project_path)
     by_name: dict[str, PouInfo] = {}
 
     for pou_type, relative_dir in _POU_DIRECTORIES:

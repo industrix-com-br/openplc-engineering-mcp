@@ -5,7 +5,7 @@ description = "Domain-oriented MCP server for OpenPLC engineering operations"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
-    "mcp[cli]>=2.1.1,<3",
+    "mcp>=2.1.1,<3",
 ]
 
 [project.scripts]
@@ -17,5 +17,6 @@ build-backend = "uv_build"
 
 [dependency-groups]
 dev = [
+    "mcp[cli]>=2.1.1,<3",
     "pytest>=8.4,<9",
 ]
