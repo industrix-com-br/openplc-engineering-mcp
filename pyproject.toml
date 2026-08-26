@@ -33,3 +33,5 @@ select = ["E", "F", "I", "UP", "B", "SIM", "C4"]
 [tool.pyright]
 pythonVersion = "3.12"
 reportMissingImports = true
+venvPath = "."
+venv = ".venv"
