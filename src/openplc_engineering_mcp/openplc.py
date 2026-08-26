@@ -1,4 +1,5 @@
 import json
+import subprocess
 from collections.abc import Iterator
 from pathlib import Path
 from typing import Literal, TypedDict, cast
@@ -30,6 +31,12 @@ class ProjectValidation(TypedDict):
     warnings: list[str]
 
 
+class CompileResult(TypedDict):
+    success: bool
+    exit_code: int
+    output: object | None
+
+
 _PROJECT_TYPES = {"plc-project", "plc-library", "PLC"}
 _POU_DIRECTORIES: tuple[tuple[PouType, str], ...] = (
     ("function", "pous/functions"),
@@ -45,6 +52,7 @@ _POU_LANGUAGES = {
     ".cpp": "cpp",
     ".json": None,
 }
+_LAST_DIAGNOSTICS: dict[str, list[str]] = {}
 
 
 def _load_project(project_path: str) -> tuple[Path, str, ProjectType]:
@@ -168,3 +176,44 @@ def list_pous(project_path: str) -> list[PouInfo]:
                 by_name[info["name"]] = info
 
     return sorted(by_name.values(), key=lambda pou: (pou["type"], pou["name"], pou["path"]))
+
+
+def compile_project(project_path: str) -> CompileResult:
+    """Compile an OpenPLC project with the official OpenPLC Editor CLI."""
+    root, _, _ = _load_project(project_path)
+
+    try:
+        result = subprocess.run(
+            ["openplc-cli", "compile", str(root), "--json"],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+    except FileNotFoundError as exc:
+        raise ToolError("openplc-cli was not found on PATH") from exc
+    except OSError as exc:
+        raise ToolError(f"Could not run openplc-cli: {exc}") from exc
+
+    _LAST_DIAGNOSTICS[str(root)] = [line.strip() for line in result.stderr.splitlines() if line.strip()]
+
+    output: object | None = None
+    if result.stdout.strip():
+        try:
+            output = json.loads(result.stdout)
+        except json.JSONDecodeError as exc:
+            raise ToolError("openplc-cli returned invalid JSON") from exc
+
+    return {
+        "success": result.returncode == 0,
+        "exit_code": result.returncode,
+        "output": output,
+    }
+
+
+def get_diagnostics(project_path: str) -> list[str]:
+    """Return diagnostics captured from the project's most recent compilation."""
+    root, _, _ = _load_project(project_path)
+    try:
+        return _LAST_DIAGNOSTICS[str(root)]
+    except KeyError as exc:
+        raise ToolError("No compilation diagnostics are available for this project") from exc
