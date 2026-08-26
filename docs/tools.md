@@ -1,23 +1,8 @@
 # MCP tools
 
-All tools currently registered by the server are read-only and idempotent.
+All tools currently registered by the server are read-only and operate within the bounded local OpenPLC project context.
 
 The public registrations live in `src/openplc_engineering_mcp/server.py`. OpenPLC project behavior lives in `src/openplc_engineering_mcp/openplc.py`.
-
-## `get_server_info`
-
-Inputs: none.
-
-Returns basic server metadata:
-
-```json
-{
-  "name": "openplc-engineering",
-  "status": "experimental",
-  "transport": "stdio",
-  "write_operations": false
-}
-```
 
 ## `get_project_structure`
 
