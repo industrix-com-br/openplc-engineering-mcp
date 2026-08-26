@@ -19,7 +19,7 @@ class ProjectStructure(TypedDict):
 class PouInfo(TypedDict):
     name: str
     type: PouType
-    language: str
+    language: str | None
     path: str
 
 
@@ -36,6 +36,7 @@ _POU_LANGUAGES = {
     ".fbd": "fbd",
     ".py": "python",
     ".cpp": "cpp",
+    ".json": None,
 }
 
 
@@ -122,23 +123,20 @@ def get_project_structure(project_path: str) -> ProjectStructure:
 def list_pous(project_path: str) -> list[PouInfo]:
     """List POUs recognized by the current OpenPLC Editor project layout."""
     root, _, _ = _load_project(project_path)
-    result: list[PouInfo] = []
+    by_name: dict[str, PouInfo] = {}
     suffixes = set(_POU_LANGUAGES)
 
     for pou_type, relative_dir in _POU_DIRECTORIES:
-        seen: set[str] = set()
         for path in _iter_pou_files(root, relative_dir, suffixes):
-            name = path.stem
-            if name in seen:
-                continue
-            seen.add(name)
-            result.append(
-                {
-                    "name": name,
-                    "type": pou_type,
-                    "language": _POU_LANGUAGES[path.suffix.lower()],
-                    "path": path.relative_to(root).as_posix(),
-                }
-            )
+            suffix = path.suffix.lower()
+            info: PouInfo = {
+                "name": path.stem,
+                "type": pou_type,
+                "language": _POU_LANGUAGES[suffix],
+                "path": path.relative_to(root).as_posix(),
+            }
+            existing = by_name.get(info["name"])
+            if existing is None or (existing["language"] is None and suffix != ".json"):
+                by_name[info["name"]] = info
 
-    return sorted(result, key=lambda pou: (pou["type"], pou["name"], pou["path"]))
+    return sorted(by_name.values(), key=lambda pou: (pou["type"], pou["name"], pou["path"]))
