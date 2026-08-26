@@ -78,14 +78,14 @@ Successful validation currently returns:
 
 `warnings` is reserved for recoverable conditions that OpenPLC itself can identify when authoritative loading is delegated to it.
 
-## OpenPLC CLI gap
+## OpenPLC CLI integration
 
-The current OpenPLC CLI can validate indirectly only by running the compiler pipeline. Compilation also depends on target selection, hardware packages, libraries, and valid IEC code, so compile failure does not prove the project structure is invalid.
+`compile_project()` shells out to `openplc-cli compile ./project --json`, relying on the CLI to resolve targets, hardware packages, libraries, and IEC code. Compile failure does not prove the project structure is invalid: `success` reflects the CLI exit code only.
 
-A future authoritative validation integration should use a dedicated OpenPLC load/validate capability, conceptually similar to:
+A dedicated authoritative load/validate capability, conceptually similar to:
 
 ```text
 openplc-cli validate ./my-project
 ```
 
-Such a command should reuse OpenPLC's own project-loading path without compiling. Until an equivalent capability exists, the MCP should keep validation shallow rather than duplicate OpenPLC semantics in Python.
+is still preferred to use OpenPLC's own project-loading path without compiling. Until such a command exists, the MCP keeps `validate_project` shallow rather than duplicate OpenPLC semantics in Python. `compile_project` is a separate, explicit operation and does not replace shallow validation.

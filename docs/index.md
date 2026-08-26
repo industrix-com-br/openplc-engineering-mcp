@@ -64,7 +64,7 @@ The implementation is intentionally small:
 | File | Responsibility |
 | --- | --- |
 | `src/openplc_engineering_mcp/server.py` | MCP server creation, tool registration, annotations, and stdio entry point |
-| `src/openplc_engineering_mcp/openplc.py` | OpenPLC project loading preconditions, project inspection, POU discovery, and validation |
+| `src/openplc_engineering_mcp/openplc.py` | OpenPLC project loading preconditions, project inspection, POU discovery, validation, and CLI-delegated compilation |
 | `tests/test_server.py` | MCP-level integration tests using the official SDK client |
 | `pyproject.toml` | Package metadata, dependencies, scripts, linting, and type-checking configuration |
 

@@ -2,14 +2,16 @@
 
 ## Current implementation
 
-The project is an early experimental, read-only MCP server for OpenPLC engineering inspection.
+The project is an early experimental MCP server for OpenPLC engineering operations. Project inspection is read-only; compilation is delegated to the authoritative `openplc-cli`.
 
 It currently provides:
 
 - MCP server metadata;
 - OpenPLC project structure inspection;
 - POU discovery;
-- shallow project validation.
+- shallow project validation;
+- compilation via `openplc-cli compile`;
+- compiler diagnostics reported by `openplc-cli`;
 
 ## Not implemented yet
 
@@ -17,8 +19,6 @@ The current server does not provide:
 
 - project or POU modification;
 - variable creation or modification;
-- compilation;
-- compiler diagnostics;
 - deployment or upload;
 - controller start/stop;
 - runtime sessions;

@@ -1,6 +1,6 @@
 # MCP tools
 
-All tools currently registered by the server are read-only and operate within the bounded local OpenPLC project context.
+Inspection tools are read-only and operate within the bounded local OpenPLC project context. `compile_project` is the single exception: it is a local write operation that invokes the authoritative `openplc-cli`.
 
 The public registrations live in `src/openplc_engineering_mcp/server.py`. OpenPLC project behavior lives in `src/openplc_engineering_mcp/openplc.py`.
 
@@ -54,6 +54,30 @@ Returns a successful shallow validation result:
 Unrecoverable local precondition failures are MCP tool errors rather than `{ "valid": false }` results.
 
 The tool intentionally does not claim compiler-level or runtime-level validity. See [`openplc-projects.md`](openplc-projects.md).
+
+## `compile_project`
+
+Input:
+
+- `project_path: str`
+
+Runs `openplc-cli compile ./project --json` and returns:
+
+- `success`: whether the CLI exited with status `0`;
+- `exit_code`: the CLI exit code;
+- `output`: the parsed JSON result from the CLI (or `null` when stdout is empty).
+
+The command must be `openplc-cli` on `PATH`, otherwise an MCP tool error is raised. Compiler diagnostics are captured from the CLI's `stderr` for the [`get_diagnostics`](#get_diagnostics) tool.
+
+This is the only non-read-only tool; it is registered with `read_only_hint: false` because compilation is a local write operation.
+
+## `get_diagnostics`
+
+Input:
+
+- `project_path: str`
+
+Returns the `stderr` diagnostics from the project's most recent [`compile_project`](#compile_project) call as a list of lines. Raises an MCP tool error when the project has not been compiled yet.
 
 ## Adding a tool
 

@@ -2,7 +2,7 @@
 
 A small experimental Python MCP server that exposes domain-oriented engineering operations for OpenPLC.
 
-The project uses the official Model Context Protocol Python SDK and stdio transport. The current implementation is intentionally read-only and keeps the integration boundary small.
+The project uses the official Model Context Protocol Python SDK and stdio transport. Inspection tools are read-only; compilation is delegated to the authoritative `openplc-cli`.
 
 ## Quick start
 
@@ -26,8 +26,10 @@ uv run pytest
 - `get_project_structure`
 - `list_pous`
 - `validate_project`
+- `compile_project`
+- `get_diagnostics`
 
-All current tools are read-only.
+Inspection tools are read-only. `compile_project` is a local write operation that requires `openplc-cli` on `PATH`.
 
 ## Documentation
 
@@ -37,6 +39,6 @@ It is the documentation entry point for both humans and agents and maps each kin
 
 ## Scope
 
-The current version focuses on project inspection and shallow project validation. Project modification, compilation, deployment, runtime control, variable forcing, authentication, HTTP transport, and generic shell/filesystem tools are not implemented.
+The current version focuses on project inspection and shallow project validation, plus compilation delegated to `openplc-cli`. Project modification, deployment, runtime control, variable forcing, authentication, HTTP transport, and generic shell/filesystem tools are not implemented.
 
 See [`docs/scope.md`](docs/scope.md) for the current boundary.
