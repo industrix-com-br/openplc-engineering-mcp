@@ -23,7 +23,6 @@ uv run pytest
 
 ## Current tools
 
-- `get_server_info`
 - `get_project_structure`
 - `list_pous`
 - `validate_project`
