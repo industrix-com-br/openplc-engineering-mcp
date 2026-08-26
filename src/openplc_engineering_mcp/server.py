@@ -7,18 +7,7 @@ from openplc_engineering_mcp.openplc import list_pous as inspect_pous
 from openplc_engineering_mcp.openplc import validate_project as inspect_project
 
 mcp = MCPServer("openplc-engineering")
-_READ_ONLY = ToolAnnotations(read_only_hint=True, idempotent_hint=True)
-
-
-@mcp.tool(annotations=_READ_ONLY)
-def get_server_info() -> dict[str, object]:
-    """Return basic information about this experimental OpenPLC MCP server."""
-    return {
-        "name": "openplc-engineering",
-        "status": "experimental",
-        "transport": "stdio",
-        "write_operations": False,
-    }
+_READ_ONLY = ToolAnnotations(read_only_hint=True, open_world_hint=False)
 
 
 @mcp.tool(annotations=_READ_ONLY)
