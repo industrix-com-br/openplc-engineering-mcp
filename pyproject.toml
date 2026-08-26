@@ -4,6 +4,8 @@ version = "0.1.0"
 description = "Domain-oriented MCP server for OpenPLC engineering operations"
 readme = "README.md"
 requires-python = ">=3.12"
+license = "Apache-2.0"
+license-files = ["LICENSE"]
 dependencies = [
     "mcp>=2.1.1,<3",
 ]
