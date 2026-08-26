@@ -1,9 +1,10 @@
 from mcp.server import MCPServer
 from mcp.types import ToolAnnotations
 
-from openplc_engineering_mcp.openplc import PouInfo, ProjectStructure
+from openplc_engineering_mcp.openplc import PouInfo, ProjectStructure, ProjectValidation
 from openplc_engineering_mcp.openplc import get_project_structure as inspect_project_structure
 from openplc_engineering_mcp.openplc import list_pous as inspect_pous
+from openplc_engineering_mcp.openplc import validate_project as inspect_project
 
 mcp = MCPServer("openplc-engineering")
 _READ_ONLY = ToolAnnotations(read_only_hint=True, idempotent_hint=True)
@@ -16,7 +17,6 @@ def get_server_info() -> dict[str, object]:
         "name": "openplc-engineering",
         "status": "experimental",
         "transport": "stdio",
-        "tools": ["get_server_info", "get_project_structure", "list_pous"],
         "write_operations": False,
     }
 
@@ -31,6 +31,12 @@ def get_project_structure(project_path: str) -> ProjectStructure:
 def list_pous(project_path: str) -> list[PouInfo]:
     """List the programs, function blocks, and functions in an OpenPLC project."""
     return inspect_pous(project_path)
+
+
+@mcp.tool(annotations=_READ_ONLY)
+def validate_project(project_path: str) -> ProjectValidation:
+    """Confirm a directory meets the MCP's shallow OpenPLC project preconditions."""
+    return inspect_project(project_path)
 
 
 def main() -> None:

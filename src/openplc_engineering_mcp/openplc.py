@@ -1,4 +1,5 @@
 import json
+from collections.abc import Iterator
 from pathlib import Path
 from typing import Literal, TypedDict, cast
 
@@ -22,6 +23,14 @@ class PouInfo(TypedDict):
     path: str
 
 
+class ProjectValidation(TypedDict):
+    valid: bool
+    name: str | None
+    type: ProjectType | None
+    warnings: list[str]
+
+
+_PROJECT_TYPES = {"plc-project", "plc-library", "PLC"}
 _POU_DIRECTORIES: tuple[tuple[PouType, str], ...] = (
     ("function", "pous/functions"),
     ("function-block", "pous/function-blocks"),
@@ -73,40 +82,45 @@ def _load_project(project_path: str) -> tuple[Path, str, ProjectType]:
     project_type = meta.get("type")
     if not isinstance(name, str):
         raise ToolError("OpenPLC project not recognized: project.json meta.name must be a string")
-    if project_type not in {"plc-project", "plc-library", "PLC"}:
+    if project_type not in _PROJECT_TYPES:
         raise ToolError("OpenPLC project not recognized: unsupported project.json meta.type")
-
-    data = project.get("data")
-    if not isinstance(data, dict):
-        raise ToolError("OpenPLC project not recognized: project.json data must be an object")
-
-    configuration = data.get("configuration")
-    if not isinstance(configuration, dict):
-        raise ToolError("OpenPLC project not recognized: project.json data.configuration must be an object")
-
-    resource = configuration.get("resource")
-    if not isinstance(resource, dict):
-        raise ToolError("OpenPLC project not recognized: project.json data.configuration.resource must be an object")
-
-    for field in ("tasks", "instances", "globalVariables"):
-        if not isinstance(resource.get(field), list):
-            raise ToolError(
-                f"OpenPLC project not recognized: project.json data.configuration.resource.{field} must be an array"
-            )
 
     return root, name, cast(ProjectType, project_type)
 
 
-def _recognized_files(root: Path, relative_dir: str, extensions: set[str]) -> list[str]:
+def validate_project(project_path: str) -> ProjectValidation:
+    """Shallowly confirm a directory is a loadable OpenPLC Editor project.
+
+    Validation is intentionally limited to the MCP-local filesystem and basic
+    metadata preconditions required for file-oriented operations. Authoritative
+    project loading/validation semantics belong to OpenPLC and are reused via a
+    future ``openplc-cli`` step rather than reproduced here.
+
+    unrecoverable failures (missing path/directory/``project.json``, malformed
+    JSON, unsupported ``meta.type``) surface as tool errors, while
+    ``warnings`` is reserved for recoverable conditions that OpenPLC loads.
+    """
+    root, name, project_type = _load_project(project_path)
+    return {
+        "valid": True,
+        "name": name,
+        "type": project_type,
+        "warnings": [],
+    }
+
+
+def _iter_pou_files(root: Path, relative_dir: str, suffixes: set[str]) -> Iterator[Path]:
     directory = root / relative_dir
     if not directory.is_dir():
-        return []
+        return
 
-    return sorted(
-        path.relative_to(root).as_posix()
-        for path in directory.rglob("*")
-        if path.is_file() and path.suffix.lower() in extensions
-    )
+    for path in sorted(directory.rglob("*")):
+        if path.is_file() and path.suffix.lower() in suffixes:
+            yield path
+
+
+def _recognized_files(root: Path, relative_dir: str, suffixes: set[str]) -> list[str]:
+    return sorted(path.relative_to(root).as_posix() for path in _iter_pou_files(root, relative_dir, suffixes))
 
 
 def get_project_structure(project_path: str) -> ProjectStructure:
@@ -118,12 +132,12 @@ def get_project_structure(project_path: str) -> ProjectStructure:
         if (root / relative_path).is_file():
             files.append(relative_path)
 
-    pou_extensions = set(_POU_LANGUAGES)
+    suffixes = set(_POU_LANGUAGES)
     for _, relative_dir in _POU_DIRECTORIES:
-        files.extend(_recognized_files(root, relative_dir, pou_extensions))
+        files.extend(_recognized_files(root, relative_dir, suffixes))
 
-    files.extend(_recognized_files(root, "devices/servers", pou_extensions))
-    files.extend(_recognized_files(root, "devices/remote", pou_extensions))
+    files.extend(_recognized_files(root, "devices/servers", suffixes))
+    files.extend(_recognized_files(root, "devices/remote", suffixes))
     files.extend(_recognized_files(root, "datatypes", {".dt"}))
 
     return {
@@ -138,17 +152,11 @@ def list_pous(project_path: str) -> list[PouInfo]:
     """List POUs recognized by the current OpenPLC Editor project layout."""
     root, _, _ = _load_project(project_path)
     by_name: dict[str, PouInfo] = {}
+    suffixes = set(_POU_LANGUAGES)
 
     for pou_type, relative_dir in _POU_DIRECTORIES:
-        directory = root / relative_dir
-        if not directory.is_dir():
-            continue
-
-        for path in sorted(directory.rglob("*")):
+        for path in _iter_pou_files(root, relative_dir, suffixes):
             suffix = path.suffix.lower()
-            if not path.is_file() or suffix not in _POU_LANGUAGES:
-                continue
-
             info: PouInfo = {
                 "name": path.stem,
                 "type": pou_type,
@@ -156,7 +164,7 @@ def list_pous(project_path: str) -> list[PouInfo]:
                 "path": path.relative_to(root).as_posix(),
             }
             existing = by_name.get(info["name"])
-            if existing is None or (existing["path"].endswith(".json") and suffix != ".json"):
+            if existing is None or (existing["language"] is None and suffix != ".json"):
                 by_name[info["name"]] = info
 
     return sorted(by_name.values(), key=lambda pou: (pou["type"], pou["name"], pou["path"]))
