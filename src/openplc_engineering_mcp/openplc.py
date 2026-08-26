@@ -23,6 +23,13 @@ class PouInfo(TypedDict):
     path: str
 
 
+class ProjectValidation(TypedDict):
+    valid: bool
+    name: str | None
+    type: ProjectType | None
+    warnings: list[str]
+
+
 _PROJECT_TYPES = {"plc-project", "plc-library", "PLC"}
 _POU_DIRECTORIES: tuple[tuple[PouType, str], ...] = (
     ("function", "pous/functions"),
@@ -79,6 +86,27 @@ def _load_project(project_path: str) -> tuple[Path, str, ProjectType]:
         raise ToolError("OpenPLC project not recognized: unsupported project.json meta.type")
 
     return root, name, cast(ProjectType, project_type)
+
+
+def validate_project(project_path: str) -> ProjectValidation:
+    """Shallowly confirm a directory is a loadable OpenPLC Editor project.
+
+    Validation is intentionally limited to the MCP-local filesystem and basic
+    metadata preconditions required for file-oriented operations. Authoritative
+    project loading/validation semantics belong to OpenPLC and are reused via a
+    future ``openplc-cli`` step rather than reproduced here.
+
+    unrecoverable failures (missing path/directory/``project.json``, malformed
+    JSON, unsupported ``meta.type``) surface as tool errors, while
+    ``warnings`` is reserved for recoverable conditions that OpenPLC loads.
+    """
+    root, name, project_type = _load_project(project_path)
+    return {
+        "valid": True,
+        "name": name,
+        "type": project_type,
+        "warnings": [],
+    }
 
 
 def _iter_pou_files(root: Path, relative_dir: str, suffixes: set[str]) -> Iterator[Path]:

@@ -57,6 +57,7 @@ async def test_server_and_tools_are_discoverable(client: Client) -> None:
         "get_server_info",
         "get_project_structure",
         "list_pous",
+        "validate_project",
     }
     assert all(tool.annotations and tool.annotations.read_only_hint for tool in listed.tools)
 
@@ -122,9 +123,7 @@ async def test_json_only_pou_is_supported(client: Client, tmp_path: Path) -> Non
 @pytest.mark.anyio
 async def test_pou_names_are_deduplicated_globally(client: Client, tmp_path: Path) -> None:
     project = make_project(tmp_path / "project")
-    (project / "pous" / "programs" / "Motor.st").write_text(
-        "PROGRAM Motor\nEND_PROGRAM\n", encoding="utf-8"
-    )
+    (project / "pous" / "programs" / "Motor.st").write_text("PROGRAM Motor\nEND_PROGRAM\n", encoding="utf-8")
 
     pous = await client.call_tool("list_pous", {"project_path": str(project)})
     assert not pous.is_error
@@ -212,3 +211,50 @@ async def test_unsupported_meta_type_is_rejected(client: Client, tmp_path: Path)
     result = await client.call_tool("get_project_structure", {"project_path": str(project)})
     assert result.is_error
     assert "unsupported project.json meta.type" in tool_text(result)
+
+
+@pytest.mark.anyio
+async def test_validate_project_reports_valid_project(client: Client, tmp_path: Path) -> None:
+    project = make_project(tmp_path / "project")
+
+    result = await client.call_tool("validate_project", {"project_path": str(project)})
+    assert not result.is_error
+    assert result.structured_content is not None
+    assert result.structured_content == {
+        "valid": True,
+        "name": "Example",
+        "type": "plc-project",
+        "warnings": [],
+    }
+
+
+@pytest.mark.anyio
+async def test_validate_project_keeps_meta_only_project_valid(client: Client, tmp_path: Path) -> None:
+    project = tmp_path / "project"
+    project.mkdir()
+    (project / "project.json").write_text(
+        json.dumps({"meta": {"name": "Minimal", "type": "plc-project"}}), encoding="utf-8"
+    )
+
+    result = await client.call_tool("validate_project", {"project_path": str(project)})
+    assert not result.is_error
+    assert result.structured_content["valid"] is True
+    assert result.structured_content["warnings"] == []
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize(
+    "content",
+    [None, "{not-json", json.dumps({"meta": {"name": "X", "type": "bad"}})],
+    ids=["missing-project-json", "invalid-json", "bad-type"],
+)
+async def test_validate_project_reports_unrecoverable_failures_as_errors(
+    client: Client, tmp_path: Path, content: str | None
+) -> None:
+    project = tmp_path / "project"
+    project.mkdir()
+    if content is not None:
+        (project / "project.json").write_text(content, encoding="utf-8")
+
+    result = await client.call_tool("validate_project", {"project_path": str(project)})
+    assert result.is_error
