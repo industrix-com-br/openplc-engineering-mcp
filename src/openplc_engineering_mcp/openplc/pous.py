@@ -72,8 +72,11 @@ def read_pou(project_path: str, pou_name: str) -> PouContent:
 
     path = root / pou["path"]
     try:
+        path = path.resolve()
+        if not path.is_relative_to(root):
+            raise ToolError(f'Could not read POU "{pou_name}": source is outside the project')
         content = path.read_text(encoding="utf-8")
-    except (OSError, UnicodeError) as exc:
+    except (OSError, RuntimeError, UnicodeError) as exc:
         raise ToolError(f'Could not read POU "{pou_name}": {exc}') from exc
 
     return {

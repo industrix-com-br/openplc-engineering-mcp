@@ -41,7 +41,7 @@ Load for system boundaries, module responsibilities, dependency direction, and p
 
 ### [`tools.md`](tools.md)
 
-Load for the current five MCP tools, inputs, outputs, annotations, errors, and diagnostics behavior.
+Load for the current six MCP tools, inputs, outputs, annotations, errors, and diagnostics behavior.
 
 ### [`openplc-projects.md`](openplc-projects.md)
 
@@ -65,9 +65,9 @@ The implementation is intentionally small and organized by domain responsibility
 
 | File | Responsibility |
 | --- | --- |
-| `src/openplc_engineering_mcp/server.py` | MCP server creation, five tool registrations, annotations, and stdio entry point |
+| `src/openplc_engineering_mcp/server.py` | MCP server creation, six tool registrations, annotations, and stdio entry point |
 | `src/openplc_engineering_mcp/openplc/project.py` | Project loading preconditions, shallow validation, structure inspection, and shared source-file scanning |
-| `src/openplc_engineering_mcp/openplc/pous.py` | POU discovery, language mapping, representation preference, and deduplication |
+| `src/openplc_engineering_mcp/openplc/pous.py` | POU discovery and reading, language mapping, representation preference, and deduplication |
 | `src/openplc_engineering_mcp/openplc/compiler.py` | `openplc-cli` compilation, JSON output parsing, and process-local diagnostics |
 | `tests/test_server.py` | MCP-level contract tests using the official SDK client |
 | `tests/test_project.py` | Project behavior tests |

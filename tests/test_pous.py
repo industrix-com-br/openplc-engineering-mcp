@@ -119,6 +119,16 @@ def test_read_pou_rejects_empty_name(tmp_path: Path) -> None:
         read_pou(str(project), "  ")
 
 
+def test_read_pou_rejects_source_outside_project(tmp_path: Path) -> None:
+    project = make_project(tmp_path / "project")
+    external_source = tmp_path / "External.st"
+    external_source.write_text("FUNCTION_BLOCK External\nEND_FUNCTION_BLOCK\n", encoding="utf-8")
+    (project / "pous" / "function-blocks" / "External.st").symlink_to(external_source)
+
+    with pytest.raises(ToolError, match="source is outside the project"):
+        read_pou(str(project), "External")
+
+
 def test_invalid_project_path_is_rejected(tmp_path: Path) -> None:
     with pytest.raises(ToolError, match="does not exist"):
         list_pous(str(tmp_path / "missing"))

@@ -85,7 +85,7 @@ Results are sorted by POU type, name, and path.
 
 The function uses the same discovery result as `list_pous()`, so representation selection remains consistent: when both a recognized source file and a same-name `.json` file exist, the source file is read; a JSON-only POU is read directly and reports `language: null`.
 
-The returned object contains the POU `name`, `type`, `language`, project-relative `path`, and the source `content` read as UTF-8. Content is returned unchanged; the MCP does not parse, normalize, summarize, or otherwise interpret it in this operation.
+The returned object contains the POU `name`, `type`, `language`, project-relative `path`, and the source `content` read as UTF-8. Content is returned unchanged; the MCP does not parse, normalize, summarize, or otherwise interpret it in this operation. The resolved source must remain inside the project root, so a POU symlink cannot expose an external file.
 
 An empty POU name, an unknown POU name, or an unreadable selected source is raised as a tool error.
 
