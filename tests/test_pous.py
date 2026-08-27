@@ -4,7 +4,7 @@ from pathlib import Path
 import pytest
 from mcp.server.mcpserver.exceptions import ToolError
 
-from openplc_engineering_mcp.openplc.pous import list_pous
+from openplc_engineering_mcp.openplc.pous import list_pous, read_pou
 
 
 def make_project(root: Path) -> Path:
@@ -74,6 +74,49 @@ def test_pou_names_are_deduplicated_globally(tmp_path: Path) -> None:
             "path": "pous/function-blocks/Motor.st",
         }
     ]
+
+
+def test_read_pou_returns_preferred_source_content(tmp_path: Path) -> None:
+    project = make_project(tmp_path / "project")
+
+    pou = read_pou(str(project), "Motor")
+
+    assert pou == {
+        "name": "Motor",
+        "type": "function-block",
+        "language": "st",
+        "path": "pous/function-blocks/Motor.st",
+        "content": "FUNCTION_BLOCK Motor\nEND_FUNCTION_BLOCK\n",
+    }
+
+
+def test_read_pou_supports_json_only_pou(tmp_path: Path) -> None:
+    project = make_project(tmp_path / "project")
+    (project / "pous" / "function-blocks" / "Motor.st").unlink()
+
+    pou = read_pou(str(project), "Motor")
+
+    assert pou == {
+        "name": "Motor",
+        "type": "function-block",
+        "language": None,
+        "path": "pous/function-blocks/Motor.json",
+        "content": "{}",
+    }
+
+
+def test_read_pou_rejects_unknown_name(tmp_path: Path) -> None:
+    project = make_project(tmp_path / "project")
+
+    with pytest.raises(ToolError, match="POU not found"):
+        read_pou(str(project), "Missing")
+
+
+def test_read_pou_rejects_empty_name(tmp_path: Path) -> None:
+    project = make_project(tmp_path / "project")
+
+    with pytest.raises(ToolError, match="pou_name must not be empty"):
+        read_pou(str(project), "  ")
 
 
 def test_invalid_project_path_is_rejected(tmp_path: Path) -> None:

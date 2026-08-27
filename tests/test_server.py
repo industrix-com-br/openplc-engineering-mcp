@@ -35,6 +35,7 @@ async def test_server_and_tools_are_discoverable(client: Client) -> None:
         "get_diagnostics",
         "get_project_structure",
         "list_pous",
+        "read_pou",
         "validate_project",
     }
     assert tools["compile_project"].annotations
@@ -63,6 +64,31 @@ async def test_tool_call_returns_structured_content(client: Client, tmp_path: Pa
         "name": "Minimal",
         "type": "plc-project",
         "warnings": [],
+    }
+
+
+@pytest.mark.anyio
+async def test_read_pou_returns_structured_content(client: Client, tmp_path: Path) -> None:
+    project = tmp_path / "project"
+    (project / "pous" / "programs").mkdir(parents=True)
+    (project / "project.json").write_text(
+        json.dumps({"meta": {"name": "Minimal", "type": "plc-project"}}), encoding="utf-8"
+    )
+    (project / "pous" / "programs" / "main.st").write_text(
+        "PROGRAM main\nEND_PROGRAM\n", encoding="utf-8"
+    )
+
+    result = await client.call_tool(
+        "read_pou", {"project_path": str(project), "pou_name": "main"}
+    )
+
+    assert not result.is_error
+    assert result.structured_content == {
+        "name": "main",
+        "type": "program",
+        "language": "st",
+        "path": "pous/programs/main.st",
+        "content": "PROGRAM main\nEND_PROGRAM\n",
     }
 
 

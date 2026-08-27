@@ -1,4 +1,7 @@
+from pathlib import Path
 from typing import Literal, TypedDict
+
+from mcp.server.mcpserver.exceptions import ToolError
 
 from openplc_engineering_mcp.openplc.project import list_source_files, load_project
 
@@ -10,6 +13,10 @@ class PouInfo(TypedDict):
     type: PouType
     language: str | None
     path: str
+
+
+class PouContent(PouInfo):
+    content: str
 
 
 _POU_DIRECTORIES: tuple[tuple[PouType, str], ...] = (
@@ -28,9 +35,7 @@ _POU_LANGUAGES = {
 }
 
 
-def list_pous(project_path: str) -> list[PouInfo]:
-    """List POUs recognized by the current OpenPLC Editor project layout."""
-    root, _, _ = load_project(project_path)
+def _list_pous(root: Path) -> list[PouInfo]:
     by_name: dict[str, PouInfo] = {}
 
     for pou_type, relative_dir in _POU_DIRECTORIES:
@@ -47,3 +52,34 @@ def list_pous(project_path: str) -> list[PouInfo]:
                 by_name[info["name"]] = info
 
     return sorted(by_name.values(), key=lambda pou: (pou["type"], pou["name"], pou["path"]))
+
+
+def list_pous(project_path: str) -> list[PouInfo]:
+    """List POUs recognized by the current OpenPLC Editor project layout."""
+    root, _, _ = load_project(project_path)
+    return _list_pous(root)
+
+
+def read_pou(project_path: str, pou_name: str) -> PouContent:
+    """Read the preferred representation of a POU by name."""
+    if not pou_name.strip():
+        raise ToolError("pou_name must not be empty")
+
+    root, _, _ = load_project(project_path)
+    pou = next((item for item in _list_pous(root) if item["name"] == pou_name), None)
+    if pou is None:
+        raise ToolError(f'POU not found: "{pou_name}"')
+
+    path = root / pou["path"]
+    try:
+        content = path.read_text(encoding="utf-8")
+    except (OSError, UnicodeError) as exc:
+        raise ToolError(f'Could not read POU "{pou_name}": {exc}') from exc
+
+    return {
+        "name": pou["name"],
+        "type": pou["type"],
+        "language": pou["language"],
+        "path": pou["path"],
+        "content": content,
+    }

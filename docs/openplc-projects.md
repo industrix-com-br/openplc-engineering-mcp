@@ -79,6 +79,16 @@ POU names are deduplicated globally. When both a `.json` representation and a re
 
 Results are sorted by POU type, name, and path.
 
+## POU reading
+
+`read_pou()` in `openplc/pous.py` reads a POU by its domain name. The caller does not provide or need to know the underlying filesystem path.
+
+The function uses the same discovery result as `list_pous()`, so representation selection remains consistent: when both a recognized source file and a same-name `.json` file exist, the source file is read; a JSON-only POU is read directly and reports `language: null`.
+
+The returned object contains the POU `name`, `type`, `language`, project-relative `path`, and the source `content` read as UTF-8. Content is returned unchanged; the MCP does not parse, normalize, summarize, or otherwise interpret it in this operation.
+
+An empty POU name, an unknown POU name, or an unreadable selected source is raised as a tool error.
+
 ## Validation semantics
 
 `validate_project()` is deliberately shallow.

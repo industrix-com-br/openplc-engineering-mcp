@@ -1,6 +1,6 @@
 # MCP tools
 
-The current server registers exactly five domain-oriented tools. All tools use `open_world_hint: false`. Inspection and diagnostics tools are read-only; `compile_project` is registered with `read_only_hint: false` because the OpenPLC CLI may write local build artifacts.
+The current server registers exactly six domain-oriented tools. All tools use `open_world_hint: false`. Inspection and diagnostics tools are read-only; `compile_project` is registered with `read_only_hint: false` because the OpenPLC CLI may write local build artifacts.
 
 The public registrations live in `src/openplc_engineering_mcp/server.py`. OpenPLC behavior is grouped by responsibility under `src/openplc_engineering_mcp/openplc/`.
 
@@ -8,6 +8,7 @@ The public registrations live in `src/openplc_engineering_mcp/server.py`. OpenPL
 | --- | --- | --- |
 | `get_project_structure` | yes | Inspect recognized files in an OpenPLC project |
 | `list_pous` | yes | Discover Programs, Function Blocks, and Functions |
+| `read_pou` | yes | Read a POU by domain name without requiring its filesystem path |
 | `validate_project` | yes | Check the MCP's shallow project preconditions |
 | `compile_project` | no | Compile through `openplc-cli` |
 | `get_diagnostics` | yes | Return diagnostics captured from the latest compilation |
@@ -41,6 +42,27 @@ Returns the recognized Programs, Function Blocks, and Functions. Each item conta
 - project-relative `path`.
 
 See [`openplc-projects.md`](openplc-projects.md) for language mapping and deduplication behavior.
+
+## `read_pou`
+
+Input:
+
+- `project_path: str`;
+- `pou_name: str`.
+
+Returns one recognized POU with:
+
+- `name`;
+- `type`;
+- `language`;
+- project-relative `path`;
+- `content` exactly as read from the selected UTF-8 source file.
+
+The caller identifies the POU by name rather than by filesystem path. `read_pou()` uses the same discovery and representation preference rules as `list_pous()`: a recognized source representation is preferred over a same-name `.json` representation, while JSON-only POUs remain readable with `language: null`.
+
+An empty `pou_name`, an unknown POU name, or an unreadable source file is exposed as an MCP tool error. The first version intentionally performs no parsing, normalization, dependency analysis, or modification of the POU content.
+
+See [`openplc-projects.md`](openplc-projects.md) for the underlying project behavior.
 
 ## `validate_project`
 
