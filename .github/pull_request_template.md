@@ -1,5 +1,10 @@
 ## Summary
 
+## Documentation
+
+- [ ] Documentation updated
+- [ ] Documentation not affected
+
 ## Validation
 
 - [ ] `uv run pytest`
