@@ -2,7 +2,7 @@ from collections.abc import Iterator
 from pathlib import Path
 from typing import Literal, TypedDict
 
-from openplc_engineering_mcp.openplc.project import _load_project
+from openplc_engineering_mcp.openplc.project import iter_source_files, load_project
 
 PouType = Literal["program", "function-block", "function"]
 
@@ -31,18 +31,12 @@ _POU_LANGUAGES = {
 
 
 def _iter_pou_files(root: Path, relative_dir: str) -> Iterator[Path]:
-    directory = root / relative_dir
-    if not directory.is_dir():
-        return
-
-    for path in sorted(directory.rglob("*")):
-        if path.is_file() and path.suffix.lower() in _POU_LANGUAGES:
-            yield path
+    yield from iter_source_files(root, relative_dir, set(_POU_LANGUAGES))
 
 
 def list_pous(project_path: str) -> list[PouInfo]:
     """List POUs recognized by the current OpenPLC Editor project layout."""
-    root, _, _ = _load_project(project_path)
+    root, _, _ = load_project(project_path)
     by_name: dict[str, PouInfo] = {}
 
     for pou_type, relative_dir in _POU_DIRECTORIES:

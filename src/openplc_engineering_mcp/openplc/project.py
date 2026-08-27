@@ -25,7 +25,7 @@ _PROJECT_TYPES = {"plc-project", "plc-library", "PLC"}
 _SOURCE_SUFFIXES = {".st", ".il", ".ld", ".fbd", ".py", ".cpp", ".json"}
 
 
-def _load_project(project_path: str) -> tuple[Path, str, ProjectType]:
+def load_project(project_path: str) -> tuple[Path, str, ProjectType]:
     if not project_path.strip():
         raise ToolError("project_path must not be empty")
 
@@ -78,7 +78,7 @@ def validate_project(project_path: str) -> ProjectValidation:
     JSON, unsupported ``meta.type``) surface as tool errors, while
     ``warnings`` is reserved for recoverable conditions that OpenPLC loads.
     """
-    _, name, project_type = _load_project(project_path)
+    _, name, project_type = load_project(project_path)
     return {
         "valid": True,
         "name": name,
@@ -87,21 +87,26 @@ def validate_project(project_path: str) -> ProjectValidation:
     }
 
 
-def _recognized_files(root: Path, relative_dir: str, suffixes: set[str]) -> list[str]:
+def iter_source_files(root: Path, relative_dir: str, suffixes: set[str]) -> list[Path]:
+    """Return recognized source files under a project-relative directory, sorted."""
     directory = root / relative_dir
     if not directory.is_dir():
         return []
 
     return sorted(
-        path.relative_to(root).as_posix()
-        for path in directory.rglob("*")
-        if path.is_file() and path.suffix.lower() in suffixes
+        path for path in directory.rglob("*") if path.is_file() and path.suffix.lower() in suffixes
     )
+
+
+def _recognized_files(root: Path, relative_dir: str, suffixes: set[str]) -> list[str]:
+    return [
+        path.relative_to(root).as_posix() for path in iter_source_files(root, relative_dir, suffixes)
+    ]
 
 
 def get_project_structure(project_path: str) -> ProjectStructure:
     """Inspect the relevant on-disk structure of an OpenPLC Editor project."""
-    root, name, project_type = _load_project(project_path)
+    root, name, project_type = load_project(project_path)
 
     files = ["project.json"]
     for relative_path in ("library.json", "devices/configuration.json", "devices/pin-mapping.json"):

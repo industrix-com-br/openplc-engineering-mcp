@@ -4,7 +4,7 @@ from typing import TypedDict
 
 from mcp.server.mcpserver.exceptions import ToolError
 
-from openplc_engineering_mcp.openplc.project import _load_project
+from openplc_engineering_mcp.openplc.project import load_project
 
 
 class CompileResult(TypedDict):
@@ -18,7 +18,7 @@ _LAST_DIAGNOSTICS: dict[str, list[str]] = {}
 
 def compile_project(project_path: str) -> CompileResult:
     """Compile an OpenPLC project with the official OpenPLC Editor CLI."""
-    root, _, _ = _load_project(project_path)
+    root, _, _ = load_project(project_path)
 
     try:
         result = subprocess.run(
@@ -50,7 +50,7 @@ def compile_project(project_path: str) -> CompileResult:
 
 def get_diagnostics(project_path: str) -> list[str]:
     """Return diagnostics captured from the project's most recent compilation."""
-    root, _, _ = _load_project(project_path)
+    root, _, _ = load_project(project_path)
     try:
         return _LAST_DIAGNOSTICS[str(root)]
     except KeyError as exc:
