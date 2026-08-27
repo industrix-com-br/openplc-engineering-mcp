@@ -1,12 +1,10 @@
 # OpenPLC projects
 
-This document describes only the OpenPLC project behavior that the MCP currently depends on.
-
-It is not a replacement for the OpenPLC project schema.
+This document describes only the OpenPLC project behavior that the MCP currently depends on. It is not a replacement for the OpenPLC project schema.
 
 ## Minimum project preconditions
 
-The current `load_project()` helper in `openplc/project.py` requires:
+The shared `load_project()` helper in `openplc/project.py` requires:
 
 - a non-empty project path;
 - an existing directory;
@@ -15,11 +13,13 @@ The current `load_project()` helper in `openplc/project.py` requires:
 - `meta.name` as a string;
 - a supported `meta.type`.
 
-Supported project types are currently:
+Supported project types are:
 
 - `plc-project`;
 - `plc-library`;
 - `PLC`.
+
+The supplied path is expanded and resolved before it is returned or used by other operations.
 
 ## Recognized project layout
 
@@ -37,7 +37,33 @@ devices/remote/**
 datatypes/**/*.dt
 ```
 
-POU-like files are recognized with these suffixes:
+For the POU, server, and remote directories, recognized file suffixes are:
+
+```text
+.st
+.il
+.ld
+.fbd
+.py
+.cpp
+.json
+```
+
+Only `.dt` files are included from `datatypes/`.
+
+Returned file paths are project-relative, use POSIX separators, are deduplicated, and are sorted.
+
+## POU discovery
+
+`list_pous()` in `openplc/pous.py` recursively searches:
+
+```text
+pous/functions/
+pous/function-blocks/
+pous/programs/
+```
+
+The reported POU language is derived from the file suffix:
 
 | Suffix | Reported language |
 | --- | --- |
@@ -49,21 +75,17 @@ POU-like files are recognized with these suffixes:
 | `.cpp` | `cpp` |
 | `.json` | `null` |
 
-## POU discovery
+POU names are deduplicated globally. When both a `.json` representation and a recognized source representation exist for the same name, the source representation is preferred. A JSON-only POU remains visible with `language: null`.
 
-`list_pous()` in `openplc/pous.py` searches the function, function-block, and program directories recursively.
-
-POU names are deduplicated globally. When both a `.json` representation and a recognized source representation exist for the same POU name, the source representation is preferred.
-
-A JSON-only POU remains visible with `language: null`.
+Results are sorted by POU type, name, and path.
 
 ## Validation semantics
 
 `validate_project()` is deliberately shallow.
 
-It checks only the MCP-local filesystem and basic metadata preconditions needed by the current file-oriented operations. It does **not** reproduce the full OpenPLC schema and does not use compilation success as a proxy for project validity.
+It checks only the local filesystem and metadata preconditions required by the current MCP operations. It does not reproduce the complete OpenPLC schema and does not use compilation success as a proxy for project validity.
 
-Unrecoverable conditions such as a missing path, missing `project.json`, malformed JSON, or unsupported `meta.type` are raised as tool errors.
+Unrecoverable conditions such as a missing path, a non-directory path, missing `project.json`, malformed JSON, missing or invalid metadata, or an unsupported `meta.type` are raised as tool errors.
 
 Successful validation currently returns:
 
@@ -76,16 +98,16 @@ Successful validation currently returns:
 }
 ```
 
-`warnings` is reserved for recoverable conditions that OpenPLC itself can identify when authoritative loading is delegated to it.
+`warnings` is currently always empty.
 
 ## OpenPLC CLI integration
 
-`compile_project()` in `openplc/compiler.py` shells out to `openplc-cli compile ./my-project --json`, relying on the CLI to resolve targets, hardware packages, libraries, and IEC code. Compile failure does not prove the project structure is invalid: `success` reflects the CLI exit code only.
-
-A dedicated authoritative load/validate capability, conceptually similar to:
+`compile_project()` in `openplc/compiler.py` first applies the same `load_project()` preconditions and then runs:
 
 ```text
-openplc-cli validate ./my-project
+openplc-cli compile <resolved-project-path> --json
 ```
 
-is still preferred to use OpenPLC's own project-loading path without compiling. Until such a command exists, the MCP keeps `validate_project` shallow rather than duplicate OpenPLC semantics in Python. `compile_project` is a separate, explicit operation and does not replace shallow validation.
+The MCP does not reproduce compilation semantics. The CLI remains authoritative for compilation, and `success` reflects only whether the CLI exited with status `0`.
+
+CLI `stdout` is parsed as JSON when non-empty. Non-empty `stderr` lines are retained in memory for `get_diagnostics()`. See [`tools.md`](tools.md) for the public compilation and diagnostics contracts.
