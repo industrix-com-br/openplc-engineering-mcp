@@ -87,7 +87,7 @@ def validate_project(project_path: str) -> ProjectValidation:
     }
 
 
-def iter_source_files(root: Path, relative_dir: str, suffixes: set[str]) -> list[Path]:
+def list_source_files(root: Path, relative_dir: str, suffixes: set[str]) -> list[Path]:
     """Return recognized source files under a project-relative directory, sorted."""
     directory = root / relative_dir
     if not directory.is_dir():
@@ -100,7 +100,7 @@ def iter_source_files(root: Path, relative_dir: str, suffixes: set[str]) -> list
 
 def _recognized_files(root: Path, relative_dir: str, suffixes: set[str]) -> list[str]:
     return [
-        path.relative_to(root).as_posix() for path in iter_source_files(root, relative_dir, suffixes)
+        path.relative_to(root).as_posix() for path in list_source_files(root, relative_dir, suffixes)
     ]
 
 
