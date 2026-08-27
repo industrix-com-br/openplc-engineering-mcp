@@ -1,13 +1,16 @@
 from mcp.server import MCPServer
 from mcp.types import ToolAnnotations
 
-from openplc_engineering_mcp.openplc import PouInfo, ProjectStructure, ProjectValidation
+from openplc_engineering_mcp.openplc import CompileResult, PouInfo, ProjectStructure, ProjectValidation
+from openplc_engineering_mcp.openplc import compile_project as compile_openplc_project
+from openplc_engineering_mcp.openplc import get_diagnostics as read_compile_diagnostics
 from openplc_engineering_mcp.openplc import get_project_structure as inspect_project_structure
 from openplc_engineering_mcp.openplc import list_pous as inspect_pous
 from openplc_engineering_mcp.openplc import validate_project as inspect_project
 
 mcp = MCPServer("openplc-engineering")
 _READ_ONLY = ToolAnnotations(read_only_hint=True, open_world_hint=False)
+_LOCAL_WRITE = ToolAnnotations(read_only_hint=False, open_world_hint=False)
 
 
 @mcp.tool(annotations=_READ_ONLY)
@@ -26,6 +29,18 @@ def list_pous(project_path: str) -> list[PouInfo]:
 def validate_project(project_path: str) -> ProjectValidation:
     """Confirm a directory meets the MCP's shallow OpenPLC project preconditions."""
     return inspect_project(project_path)
+
+
+@mcp.tool(annotations=_LOCAL_WRITE)
+def compile_project(project_path: str) -> CompileResult:
+    """Compile an OpenPLC project using openplc-cli."""
+    return compile_openplc_project(project_path)
+
+
+@mcp.tool(annotations=_READ_ONLY)
+def get_diagnostics(project_path: str) -> list[str]:
+    """Return diagnostics from the project's most recent compilation."""
+    return read_compile_diagnostics(project_path)
 
 
 def main() -> None:

@@ -1,4 +1,5 @@
 import json
+import subprocess
 from pathlib import Path
 
 import pytest
@@ -53,13 +54,22 @@ def make_project(root: Path, *, project_type: str = "plc-project") -> Path:
 async def test_server_and_tools_are_discoverable(client: Client) -> None:
     assert isinstance(mcp, MCPServer)
     listed = await client.list_tools()
-    assert {tool.name for tool in listed.tools} == {
+    tools = {tool.name: tool for tool in listed.tools}
+    assert set(tools) == {
+        "compile_project",
+        "get_diagnostics",
         "get_project_structure",
         "list_pous",
         "validate_project",
     }
-    assert all(tool.annotations and tool.annotations.read_only_hint for tool in listed.tools)
+    assert tools["compile_project"].annotations
+    assert tools["compile_project"].annotations.read_only_hint is False
     assert all(tool.annotations and tool.annotations.open_world_hint is False for tool in listed.tools)
+    assert all(
+        tool.annotations and tool.annotations.read_only_hint
+        for name, tool in tools.items()
+        if name != "compile_project"
+    )
 
 
 @pytest.mark.anyio
@@ -92,6 +102,58 @@ async def test_openplc_tools_use_current_project_layout(client: Client, tmp_path
             "path": "pous/programs/main.st",
         },
     ]
+
+
+@pytest.mark.anyio
+async def test_compile_project_and_get_diagnostics(client: Client, tmp_path: Path, monkeypatch) -> None:
+    project = make_project(tmp_path / "project")
+
+    def fake_run(args, **kwargs):
+        assert args == ["openplc-cli", "compile", str(project.resolve()), "--json"]
+        assert kwargs == {"capture_output": True, "text": True, "check": False}
+        return subprocess.CompletedProcess(
+            args,
+            4,
+            stdout='{"code":"compile_failed"}',
+            stderr="main.st:1: error: undeclared variable\n",
+        )
+
+    monkeypatch.setattr("openplc_engineering_mcp.openplc.subprocess.run", fake_run)
+
+    compiled = await client.call_tool("compile_project", {"project_path": str(project)})
+    assert not compiled.is_error
+    assert compiled.structured_content == {
+        "success": False,
+        "exit_code": 4,
+        "output": {"code": "compile_failed"},
+    }
+
+    diagnostics = await client.call_tool("get_diagnostics", {"project_path": str(project)})
+    assert not diagnostics.is_error
+    assert diagnostics.structured_content["result"] == ["main.st:1: error: undeclared variable"]
+
+
+@pytest.mark.anyio
+async def test_compile_project_reports_missing_cli(client: Client, tmp_path: Path, monkeypatch) -> None:
+    project = make_project(tmp_path / "project")
+
+    def missing_cli(*args, **kwargs):
+        raise FileNotFoundError
+
+    monkeypatch.setattr("openplc_engineering_mcp.openplc.subprocess.run", missing_cli)
+
+    result = await client.call_tool("compile_project", {"project_path": str(project)})
+    assert result.is_error
+    assert "openplc-cli was not found on PATH" in tool_text(result)
+
+
+@pytest.mark.anyio
+async def test_get_diagnostics_requires_compilation(client: Client, tmp_path: Path) -> None:
+    project = make_project(tmp_path / "project")
+
+    result = await client.call_tool("get_diagnostics", {"project_path": str(project)})
+    assert result.is_error
+    assert "No compilation diagnostics are available" in tool_text(result)
 
 
 @pytest.mark.anyio

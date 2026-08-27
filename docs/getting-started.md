@@ -6,6 +6,7 @@ Use this document for local setup and execution only.
 
 - Python 3.12+
 - [uv](https://docs.astral.sh/uv/)
+- `openplc-cli` on `PATH` when using `compile_project`
 - Node.js/npm only when using MCP Inspector through `mcp dev`
 
 ## Install

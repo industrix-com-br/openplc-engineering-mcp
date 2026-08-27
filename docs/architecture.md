@@ -21,7 +21,7 @@ The server provides a small domain-oriented interface between an MCP-compatible 
 2. **Use the official MCP SDK.** Do not reproduce transport, discovery, tool-calling, or protocol behavior already provided by the SDK.
 3. **Keep OpenPLC authoritative.** Do not copy the complete OpenPLC project schema or reimplement OpenPLC loading semantics inside the MCP server.
 4. **Prefer small functions and direct code.** Add layers only when a concrete requirement makes them necessary.
-5. **Expand capabilities incrementally.** The current read-only server should not carry architecture for hypothetical future operations.
+5. **Expand capabilities incrementally.** The inspection surface is read-only; the only write operation is `compile_project`, which delegates to the authoritative `openplc-cli`. The server should not carry architecture for hypothetical future operations.
 
 ## Module responsibilities
 
@@ -45,7 +45,11 @@ Responsible for the current OpenPLC-facing behavior:
 - reading basic project metadata;
 - listing relevant project files;
 - discovering POUs;
-- providing shallow project validation.
+- providing shallow project validation;
+- delegating compilation to `openplc-cli`;
+- capturing compiler diagnostics.
+
+Compilation shells out to the authoritative `openplc-cli` rather than reimplementing the compiler. This keeps OpenPLC authoritative and avoids duplicating compilation semantics.
 
 ## Dependency direction
 
