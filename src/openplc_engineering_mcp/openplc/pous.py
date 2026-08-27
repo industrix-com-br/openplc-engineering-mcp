@@ -35,11 +35,20 @@ _POU_LANGUAGES = {
 }
 
 
+def _is_contained(root: Path, path: Path) -> bool:
+    try:
+        return path.resolve().is_relative_to(root)
+    except (OSError, RuntimeError):
+        return False
+
+
 def _list_pous(root: Path) -> list[PouInfo]:
     by_name: dict[str, PouInfo] = {}
 
     for pou_type, relative_dir in _POU_DIRECTORIES:
         for path in list_source_files(root, relative_dir, set(_POU_LANGUAGES)):
+            if not _is_contained(root, path):
+                continue
             suffix = path.suffix.lower()
             info: PouInfo = {
                 "name": path.stem,
@@ -72,8 +81,7 @@ def read_pou(project_path: str, pou_name: str) -> PouContent:
 
     path = root / pou["path"]
     try:
-        path = path.resolve()
-        if not path.is_relative_to(root):
+        if not _is_contained(root, path):
             raise ToolError(f'Could not read POU "{pou_name}": source is outside the project')
         content = path.read_text(encoding="utf-8")
     except (OSError, RuntimeError, UnicodeError) as exc:

@@ -119,13 +119,16 @@ def test_read_pou_rejects_empty_name(tmp_path: Path) -> None:
         read_pou(str(project), "  ")
 
 
-def test_read_pou_rejects_source_outside_project(tmp_path: Path) -> None:
+def test_escaping_symlink_is_not_listed_nor_read(tmp_path: Path) -> None:
     project = make_project(tmp_path / "project")
     external_source = tmp_path / "External.st"
     external_source.write_text("FUNCTION_BLOCK External\nEND_FUNCTION_BLOCK\n", encoding="utf-8")
     (project / "pous" / "function-blocks" / "External.st").symlink_to(external_source)
 
-    with pytest.raises(ToolError, match="source is outside the project"):
+    names = [pou["name"] for pou in list_pous(str(project))]
+    assert "External" not in names
+
+    with pytest.raises(ToolError, match="POU not found"):
         read_pou(str(project), "External")
 
 
