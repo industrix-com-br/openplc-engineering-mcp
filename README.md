@@ -4,6 +4,8 @@ A small experimental Python MCP server that exposes domain-oriented engineering 
 
 The project uses the official Model Context Protocol Python SDK and stdio transport. Inspection tools are read-only; compilation is delegated to the authoritative `openplc-cli`.
 
+**[Documentation](https://industrix-com-br.github.io/openplc-engineering-mcp/)**
+
 ## Quick start
 
 Requirements: Python 3.12+ and [uv](https://docs.astral.sh/uv/).
@@ -33,9 +35,9 @@ Inspection tools are read-only. `compile_project` is a local write operation tha
 
 ## Documentation
 
-Start with [`docs/index.md`](docs/index.md).
+Read the [published documentation](https://industrix-com-br.github.io/openplc-engineering-mcp/) for setup, architecture, MCP tools, OpenPLC project behavior, development, scope, and research context.
 
-It is the documentation entry point for both humans and agents and maps each kind of task to the minimum set of documentation and source files that should be loaded.
+The source documentation remains in [`docs/`](docs/) and [`docs/index.md`](docs/index.md) is the entry point for agents working directly with the repository.
 
 ## Scope
 
