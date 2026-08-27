@@ -40,6 +40,19 @@ Keep domain implementation behavior close to the implementation modules:
 
 Direct domain tests are appropriate for implementation behavior. MCP registration behavior should remain in `test_server.py` rather than being repeated in every domain test.
 
+## Documentation site
+
+The files in `docs/` are the single source for the MkDocs site.
+
+Build locally with:
+
+```bash
+python -m pip install -r requirements-docs.txt
+mkdocs serve
+```
+
+Changes merged to `main` are published by `.github/workflows/docs.yml`. GitHub Pages must use **GitHub Actions** as its publishing source.
+
 ## Change workflow
 
 For implementation changes:
