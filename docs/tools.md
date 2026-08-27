@@ -1,8 +1,16 @@
 # MCP tools
 
-Inspection tools are read-only and operate within the bounded local OpenPLC project context. `compile_project` is the single exception: it is a local write operation that invokes the authoritative `openplc-cli`.
+The current server registers exactly five domain-oriented tools. All tools use `open_world_hint: false`. Inspection and diagnostics tools are read-only; `compile_project` is registered with `read_only_hint: false` because the OpenPLC CLI may write local build artifacts.
 
-The public registrations live in `src/openplc_engineering_mcp/server.py`. OpenPLC project behavior is grouped by responsibility under `src/openplc_engineering_mcp/openplc/`.
+The public registrations live in `src/openplc_engineering_mcp/server.py`. OpenPLC behavior is grouped by responsibility under `src/openplc_engineering_mcp/openplc/`.
+
+| Tool | Read-only | Purpose |
+| --- | --- | --- |
+| `get_project_structure` | yes | Inspect recognized files in an OpenPLC project |
+| `list_pous` | yes | Discover Programs, Function Blocks, and Functions |
+| `validate_project` | yes | Check the MCP's shallow project preconditions |
+| `compile_project` | no | Compile through `openplc-cli` |
+| `get_diagnostics` | yes | Return diagnostics captured from the latest compilation |
 
 ## `get_project_structure`
 
@@ -32,7 +40,7 @@ Returns the recognized Programs, Function Blocks, and Functions. Each item conta
 - `language`;
 - project-relative `path`.
 
-See [`openplc-projects.md`](openplc-projects.md) for language and deduplication behavior.
+See [`openplc-projects.md`](openplc-projects.md) for language mapping and deduplication behavior.
 
 ## `validate_project`
 
@@ -53,7 +61,7 @@ Returns a successful shallow validation result:
 
 Unrecoverable local precondition failures are MCP tool errors rather than `{ "valid": false }` results.
 
-The tool intentionally does not claim compiler-level or runtime-level validity. See [`openplc-projects.md`](openplc-projects.md).
+The tool does not perform compiler-level or runtime-level validation. See [`openplc-projects.md`](openplc-projects.md).
 
 ## `compile_project`
 
@@ -61,15 +69,21 @@ Input:
 
 - `project_path: str`
 
-Runs `openplc-cli compile ./project --json` and returns:
+After resolving and validating the project path, the implementation runs:
+
+```text
+openplc-cli compile <resolved-project-path> --json
+```
+
+It returns:
 
 - `success`: whether the CLI exited with status `0`;
 - `exit_code`: the CLI exit code;
-- `output`: the parsed JSON result from the CLI (or `null` when stdout is empty).
+- `output`: parsed JSON from CLI `stdout`, or `null` when `stdout` is empty.
 
-The command must be `openplc-cli` on `PATH`, otherwise an MCP tool error is raised. Compiler diagnostics are captured from the CLI's `stderr` for the [`get_diagnostics`](#get_diagnostics) tool.
+The command must be available as `openplc-cli` on `PATH`. A missing executable, an OS error while starting the process, or non-JSON non-empty `stdout` is exposed as an MCP tool error.
 
-This is the only non-read-only tool; it is registered with `read_only_hint: false` because compilation is a local write operation.
+Non-empty lines from CLI `stderr` are captured as diagnostics for [`get_diagnostics`](#get_diagnostics).
 
 ## `get_diagnostics`
 
@@ -77,7 +91,16 @@ Input:
 
 - `project_path: str`
 
-Returns the `stderr` diagnostics from the project's most recent [`compile_project`](#compile_project) call as a list of lines. Raises an MCP tool error when the project has not been compiled yet.
+Returns the `stderr` lines captured from the project's most recent `compile_project` call.
+
+Diagnostics are intentionally process-local:
+
+- they are stored in memory, keyed by the resolved project path;
+- a later compilation of the same project replaces the previous diagnostics;
+- they are not persisted across server restarts;
+- calling this tool before a compilation for that project raises an MCP tool error.
+
+An executed compilation with no `stderr` produces an empty list.
 
 ## Adding a tool
 
