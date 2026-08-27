@@ -37,15 +37,15 @@ Load for installation, execution, MCP Inspector, and local verification commands
 
 ### [`architecture.md`](architecture.md)
 
-Load for system boundaries, module responsibilities, and architectural principles.
+Load for system boundaries, module responsibilities, dependency direction, and process state.
 
 ### [`tools.md`](tools.md)
 
-Load for the current MCP tool inventory, inputs, outputs, and behavior.
+Load for the current five MCP tools, inputs, outputs, annotations, errors, and diagnostics behavior.
 
 ### [`openplc-projects.md`](openplc-projects.md)
 
-Load for the OpenPLC Editor project layout, POU discovery, and validation semantics.
+Load for project preconditions, recognized project layout, POU discovery, validation, and CLI integration semantics.
 
 ### [`development.md`](development.md)
 
@@ -65,14 +65,14 @@ The implementation is intentionally small and organized by domain responsibility
 
 | File | Responsibility |
 | --- | --- |
-| `src/openplc_engineering_mcp/server.py` | MCP server creation, tool registration, annotations, and stdio entry point |
-| `src/openplc_engineering_mcp/openplc/project.py` | OpenPLC project loading preconditions, validation, and structure inspection |
-| `src/openplc_engineering_mcp/openplc/pous.py` | POU discovery and POU-specific representations |
-| `src/openplc_engineering_mcp/openplc/compiler.py` | `openplc-cli` compilation and compiler diagnostics |
+| `src/openplc_engineering_mcp/server.py` | MCP server creation, five tool registrations, annotations, and stdio entry point |
+| `src/openplc_engineering_mcp/openplc/project.py` | Project loading preconditions, shallow validation, structure inspection, and shared source-file scanning |
+| `src/openplc_engineering_mcp/openplc/pous.py` | POU discovery, language mapping, representation preference, and deduplication |
+| `src/openplc_engineering_mcp/openplc/compiler.py` | `openplc-cli` compilation, JSON output parsing, and process-local diagnostics |
 | `tests/test_server.py` | MCP-level contract tests using the official SDK client |
 | `tests/test_project.py` | Project behavior tests |
 | `tests/test_pous.py` | POU behavior tests |
-| `tests/test_compiler.py` | Compiler behavior tests |
+| `tests/test_compiler.py` | Compiler and diagnostics behavior tests |
 | `pyproject.toml` | Package metadata, dependencies, scripts, linting, and type-checking configuration |
 
 ## Documentation maintenance
