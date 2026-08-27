@@ -1,18 +1,14 @@
 from mcp.server import MCPServer
 from mcp.types import ToolAnnotations
 
-from openplc_engineering_mcp.openplc.compiler import (
-    CompileResult,
-    compile_project as compile_openplc_project,
-    get_diagnostics as read_compile_diagnostics,
-)
-from openplc_engineering_mcp.openplc.pous import PouInfo, list_pous as inspect_pous
-from openplc_engineering_mcp.openplc.project import (
-    ProjectStructure,
-    ProjectValidation,
-    get_project_structure as inspect_project_structure,
-    validate_project as inspect_project,
-)
+from openplc_engineering_mcp.openplc.compiler import CompileResult
+from openplc_engineering_mcp.openplc.compiler import compile_project as compile_openplc_project
+from openplc_engineering_mcp.openplc.compiler import get_diagnostics as read_compile_diagnostics
+from openplc_engineering_mcp.openplc.pous import PouInfo
+from openplc_engineering_mcp.openplc.pous import list_pous as inspect_pous
+from openplc_engineering_mcp.openplc.project import ProjectStructure, ProjectValidation
+from openplc_engineering_mcp.openplc.project import get_project_structure as inspect_project_structure
+from openplc_engineering_mcp.openplc.project import validate_project as inspect_project
 
 mcp = MCPServer("openplc-engineering")
 _READ_ONLY = ToolAnnotations(read_only_hint=True, open_world_hint=False)
