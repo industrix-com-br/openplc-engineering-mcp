@@ -20,10 +20,12 @@ Do not load the entire `docs/` directory by default.
 | --- | --- | --- |
 | Understand the project quickly | [`architecture.md`](architecture.md), [`scope.md`](scope.md) | `README.md` |
 | Install, run, or inspect the server | [`getting-started.md`](getting-started.md) | `pyproject.toml`, `src/openplc_engineering_mcp/server.py` |
-| Add or change an MCP tool | [`tools.md`](tools.md), [`architecture.md`](architecture.md) | `src/openplc_engineering_mcp/server.py`, `src/openplc_engineering_mcp/openplc.py`, `tests/test_server.py` |
-| Change OpenPLC project discovery or validation | [`openplc-projects.md`](openplc-projects.md), [`tools.md`](tools.md) | `src/openplc_engineering_mcp/openplc.py`, `tests/test_server.py` |
-| Change MCP registration or transport behavior | [`architecture.md`](architecture.md), [`tools.md`](tools.md) | `src/openplc_engineering_mcp/server.py` |
-| Add or update tests, linting, or type checking | [`development.md`](development.md) | `pyproject.toml`, `tests/test_server.py` |
+| Add or change an MCP tool | [`tools.md`](tools.md), [`architecture.md`](architecture.md) | `src/openplc_engineering_mcp/server.py`, relevant `src/openplc_engineering_mcp/openplc/` module, `tests/test_server.py` |
+| Change OpenPLC project discovery or validation | [`openplc-projects.md`](openplc-projects.md), [`tools.md`](tools.md) | `src/openplc_engineering_mcp/openplc/project.py`, `tests/test_project.py` |
+| Change POU discovery or access | [`openplc-projects.md`](openplc-projects.md), [`tools.md`](tools.md) | `src/openplc_engineering_mcp/openplc/pous.py`, `tests/test_pous.py` |
+| Change OpenPLC compilation or diagnostics | [`tools.md`](tools.md), [`architecture.md`](architecture.md) | `src/openplc_engineering_mcp/openplc/compiler.py`, `tests/test_compiler.py` |
+| Change MCP registration or transport behavior | [`architecture.md`](architecture.md), [`tools.md`](tools.md) | `src/openplc_engineering_mcp/server.py`, `tests/test_server.py` |
+| Add or update tests, linting, or type checking | [`development.md`](development.md) | `pyproject.toml`, relevant tests |
 | Decide whether a feature belongs in the current implementation | [`scope.md`](scope.md), [`architecture.md`](architecture.md) | [`research.md`](research.md) when the research rationale matters |
 | Understand the thesis / experimental role of the repository | [`research.md`](research.md) | [`scope.md`](scope.md), [`architecture.md`](architecture.md) |
 
@@ -59,13 +61,18 @@ Load only when a task depends on the research objective or experimental design o
 
 ## Source map
 
-The implementation is intentionally small:
+The implementation is intentionally small and organized by domain responsibility:
 
 | File | Responsibility |
 | --- | --- |
 | `src/openplc_engineering_mcp/server.py` | MCP server creation, tool registration, annotations, and stdio entry point |
-| `src/openplc_engineering_mcp/openplc.py` | OpenPLC project loading preconditions, project inspection, POU discovery, validation, and CLI-delegated compilation |
-| `tests/test_server.py` | MCP-level integration tests using the official SDK client |
+| `src/openplc_engineering_mcp/openplc/project.py` | OpenPLC project loading preconditions, validation, and structure inspection |
+| `src/openplc_engineering_mcp/openplc/pous.py` | POU discovery and POU-specific representations |
+| `src/openplc_engineering_mcp/openplc/compiler.py` | `openplc-cli` compilation and compiler diagnostics |
+| `tests/test_server.py` | MCP-level contract tests using the official SDK client |
+| `tests/test_project.py` | Project behavior tests |
+| `tests/test_pous.py` | POU behavior tests |
+| `tests/test_compiler.py` | Compiler behavior tests |
 | `pyproject.toml` | Package metadata, dependencies, scripts, linting, and type-checking configuration |
 
 ## Documentation maintenance

@@ -6,7 +6,7 @@ It is not a replacement for the OpenPLC project schema.
 
 ## Minimum project preconditions
 
-The current `_load_project()` helper requires:
+The current `_load_project()` helper in `openplc/project.py` requires:
 
 - a non-empty project path;
 - an existing directory;
@@ -51,7 +51,7 @@ POU-like files are recognized with these suffixes:
 
 ## POU discovery
 
-`list_pous()` searches the function, function-block, and program directories recursively.
+`list_pous()` in `openplc/pous.py` searches the function, function-block, and program directories recursively.
 
 POU names are deduplicated globally. When both a `.json` representation and a recognized source representation exist for the same POU name, the source representation is preferred.
 
@@ -80,7 +80,7 @@ Successful validation currently returns:
 
 ## OpenPLC CLI integration
 
-`compile_project()` shells out to `openplc-cli compile ./project --json`, relying on the CLI to resolve targets, hardware packages, libraries, and IEC code. Compile failure does not prove the project structure is invalid: `success` reflects the CLI exit code only.
+`compile_project()` in `openplc/compiler.py` shells out to `openplc-cli compile ./my-project --json`, relying on the CLI to resolve targets, hardware packages, libraries, and IEC code. Compile failure does not prove the project structure is invalid: `success` reflects the CLI exit code only.
 
 A dedicated authoritative load/validate capability, conceptually similar to:
 

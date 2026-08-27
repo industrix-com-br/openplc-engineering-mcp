@@ -35,27 +35,50 @@ Responsible for:
 - exposing the package entry point;
 - starting the stdio server.
 
-It should stay thin. OpenPLC-specific behavior belongs outside the MCP registration layer.
+It should stay thin. OpenPLC-specific behavior belongs in the `openplc` package.
 
-### `openplc.py`
+### `openplc/project.py`
 
-Responsible for the current OpenPLC-facing behavior:
+Responsible for project-level behavior:
 
 - checking the minimum filesystem preconditions for an OpenPLC project;
 - reading basic project metadata;
-- listing relevant project files;
-- discovering POUs;
 - providing shallow project validation;
-- delegating compilation to `openplc-cli`;
-- capturing compiler diagnostics.
+- listing relevant project files.
 
-Compilation shells out to the authoritative `openplc-cli` rather than reimplementing the compiler. This keeps OpenPLC authoritative and avoids duplicating compilation semantics.
+### `openplc/pous.py`
+
+Responsible for POU behavior:
+
+- discovering programs, function blocks, and functions;
+- recognizing supported POU representations;
+- preferring source representations over JSON when both exist;
+- keeping POU discovery logic together for future POU read/write operations.
+
+### `openplc/compiler.py`
+
+Responsible for compiler behavior:
+
+- delegating compilation to `openplc-cli`;
+- parsing the CLI JSON result;
+- capturing compiler diagnostics from `stderr`;
+- returning diagnostics from the most recent compilation.
+
+Compilation shells out to the authoritative `openplc-cli` rather than reimplementing the compiler. A separate CLI abstraction is not needed while compilation is the only feature that executes it.
 
 ## Dependency direction
 
-`server.py` calls domain functions from `openplc.py`. The OpenPLC module does not depend on MCP tool registration.
+```text
+server.py
+   ├── openplc.project
+   ├── openplc.pous
+   └── openplc.compiler
 
-This keeps protocol registration separate from project inspection without introducing additional service or repository layers that are not currently needed.
+openplc.pous ──────► openplc.project
+openplc.compiler ──► openplc.project
+```
+
+`project.py` does not depend on the POU or compiler modules. This keeps project loading as the shared lower-level dependency without adding service, repository, adapter, or client layers.
 
 ## Transport
 
