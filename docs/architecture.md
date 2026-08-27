@@ -33,7 +33,7 @@ The server provides a small domain-oriented interface between an MCP-compatible 
 Responsible for:
 
 - creating the `MCPServer`;
-- registering the five public MCP tools;
+- registering the six public MCP tools;
 - applying tool annotations;
 - exposing the package entry point;
 - starting the stdio server.
@@ -56,6 +56,7 @@ Responsible for project-level behavior shared by the other OpenPLC modules:
 Responsible for POU behavior:
 
 - discovering Programs, Function Blocks, and Functions;
+- reading POU content by domain name;
 - mapping recognized suffixes to reported languages;
 - preferring a source representation over JSON when both exist;
 - returning deduplicated, sorted POU information.
