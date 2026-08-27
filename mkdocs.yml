@@ -1,0 +1,18 @@
+site_name: OpenPLC Engineering MCP
+site_description: Domain-oriented MCP server for OpenPLC engineering operations
+repo_url: https://github.com/industrix-com-br/openplc-engineering-mcp
+repo_name: industrix-com-br/openplc-engineering-mcp
+edit_uri: edit/main/docs/
+
+theme:
+  name: mkdocs
+
+nav:
+  - Home: index.md
+  - Getting Started: getting-started.md
+  - Architecture: architecture.md
+  - MCP Tools: tools.md
+  - OpenPLC Projects: openplc-projects.md
+  - Development: development.md
+  - Scope: scope.md
+  - Research Context: research.md
