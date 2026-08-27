@@ -6,7 +6,7 @@ It is not a replacement for the OpenPLC project schema.
 
 ## Minimum project preconditions
 
-The current `_load_project()` helper in `openplc/project.py` requires:
+The current `load_project()` helper in `openplc/project.py` requires:
 
 - a non-empty project path;
 - an existing directory;
