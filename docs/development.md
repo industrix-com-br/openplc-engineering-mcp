@@ -30,11 +30,15 @@ The project configuration for dependencies, Ruff, and Pyright is in `pyproject.t
 
 ## Test approach
 
-Tests should exercise MCP tools through the official SDK's in-memory `Client(mcp)` interface rather than calling registered tool functions directly.
+Use `tests/test_server.py` for MCP-level contract coverage through the official SDK's in-memory `Client(mcp)` interface. This verifies tool discovery, annotations, structured content, and tool-error behavior.
 
-This verifies the public MCP boundary, tool discovery, structured content, annotations, and tool-error behavior.
+Keep domain implementation behavior close to the implementation modules:
 
-Current MCP integration coverage is in `tests/test_server.py`.
+- `tests/test_project.py` for project loading, validation, and structure inspection;
+- `tests/test_pous.py` for POU discovery behavior;
+- `tests/test_compiler.py` for CLI compilation and diagnostics.
+
+Direct domain tests are appropriate for implementation behavior. MCP registration behavior should remain in `test_server.py` rather than being repeated in every domain test.
 
 ## Change workflow
 
@@ -43,8 +47,8 @@ For implementation changes:
 1. read [`index.md`](index.md) and load only the relevant documents;
 2. inspect the implementation and existing tests for the affected behavior;
 3. make the smallest change that satisfies the requirement;
-4. add or update tests at the public MCP boundary;
-5. run `pytest`, `ruff`, and `pyright`;
+4. update domain tests and MCP boundary tests where relevant;
+5. run `pytest`, `ruff`, `pyright`, and `uv build`;
 6. update only the documentation whose contract or explanation changed.
 
 ## Documentation rule

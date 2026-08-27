@@ -2,7 +2,7 @@
 
 Inspection tools are read-only and operate within the bounded local OpenPLC project context. `compile_project` is the single exception: it is a local write operation that invokes the authoritative `openplc-cli`.
 
-The public registrations live in `src/openplc_engineering_mcp/server.py`. OpenPLC project behavior lives in `src/openplc_engineering_mcp/openplc.py`.
+The public registrations live in `src/openplc_engineering_mcp/server.py`. OpenPLC project behavior is grouped by responsibility under `src/openplc_engineering_mcp/openplc/`.
 
 ## `get_project_structure`
 
@@ -86,6 +86,7 @@ Before adding a new tool:
 1. verify that the operation belongs inside the current scope;
 2. keep the public tool domain-oriented;
 3. keep the MCP registration in `server.py` thin;
-4. place OpenPLC-specific behavior in the smallest appropriate implementation module;
-5. test behavior through the official MCP SDK client;
-6. update this document when the public tool contract changes.
+4. place OpenPLC-specific behavior in the smallest cohesive domain module;
+5. test MCP contract behavior through the official MCP SDK client;
+6. test domain behavior in the corresponding domain test module;
+7. update this document when the public tool contract changes.
