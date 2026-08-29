@@ -1,6 +1,6 @@
 # MCP tools
 
-The current server registers exactly eight domain-oriented tools. All tools use `open_world_hint: false`. Inspection and diagnostics tools are read-only; `compile_project` is registered with `read_only_hint: false` because the OpenPLC CLI may write local build artifacts.
+The current server registers exactly nine domain-oriented tools. All tools use `open_world_hint: false`. Inspection and diagnostics tools are read-only; `compile_project` is registered with `read_only_hint: false` because the OpenPLC CLI may write local build artifacts.
 
 The public registrations live in `src/openplc_engineering_mcp/server.py`. OpenPLC behavior is grouped by responsibility under `src/openplc_engineering_mcp/openplc/`.
 
@@ -11,6 +11,7 @@ The public registrations live in `src/openplc_engineering_mcp/server.py`. OpenPL
 | `get_execution_configuration` | yes | Inspect configured Tasks and Program Instances |
 | `read_pou` | yes | Read a POU by domain name without requiring its filesystem path |
 | `list_variables` | yes | Inspect variables declared by a POU |
+| `list_global_variables` | yes | Inspect the project's resource-level global variables |
 | `validate_project` | yes | Check the MCP's shallow project preconditions |
 | `compile_project` | no | Compile through `openplc-cli` |
 | `get_diagnostics` | yes | Return diagnostics captured from the latest compilation |
@@ -160,6 +161,38 @@ The first version intentionally does not provide:
 - a structured mirror of OpenPLC's internal type model.
 
 See [`openplc-projects.md`](openplc-projects.md) for the OpenPLC behavior this extraction depends on.
+
+## `list_global_variables`
+
+Input:
+
+- `project_path: str`.
+
+Returns the project's **resource-level global variables** — exactly the entries stored under `data.configuration.resource.globalVariables` — in stored order. Each item uses the same public variable representation as [`list_variables`](#list_variables):
+
+```json
+{
+  "name": "EmergencyStop",
+  "class": "global",
+  "type": "BOOL",
+  "location": "%IX0.0",
+  "initial_value": null,
+  "documentation": "Emergency stop input"
+}
+```
+
+`class` is always `global` because the containing resource defines the scope, regardless of any stored class field. Declared types and initial values are preserved as strings; empty stored optional values (`""`) are normalized to `null` exactly like `list_variables()`.
+
+The tool intentionally returns only `configuration.resource.globalVariables`. It does not scan POUs for `VAR_GLOBAL` declarations and it does not include named global variable lists (`globalVariableLists` / GVLs); those are separate domain concepts.
+
+```text
+list_variables(project_path, pou_name)    -> variables declared by one POU
+list_global_variables(project_path)       -> configuration.resource.globalVariables
+```
+
+A project with no execution configuration or no `globalVariables` returns an empty list. A non-array `globalVariables` value, or an individual variable that cannot be represented reliably, is raised as an MCP tool error rather than being converted into an empty result.
+
+See [`openplc-projects.md`](openplc-projects.md) for the underlying project representation.
 
 ## `validate_project`
 

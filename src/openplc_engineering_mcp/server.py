@@ -17,6 +17,7 @@ from openplc_engineering_mcp.openplc.project import ProjectStructure, ProjectVal
 from openplc_engineering_mcp.openplc.project import get_project_structure as inspect_project_structure
 from openplc_engineering_mcp.openplc.project import validate_project as inspect_project
 from openplc_engineering_mcp.openplc.variables import VariableInfo
+from openplc_engineering_mcp.openplc.variables import list_global_variables as inspect_global_variables
 from openplc_engineering_mcp.openplc.variables import list_variables as inspect_variables
 
 mcp = MCPServer("openplc-engineering")
@@ -52,6 +53,17 @@ def read_pou(project_path: str, pou_name: str) -> PouContent:
 def list_variables(project_path: str, pou_name: str) -> list[VariableInfo]:
     """List variables declared by a POU in an OpenPLC project."""
     return inspect_variables(project_path, pou_name)
+
+
+@mcp.tool(annotations=_READ_ONLY)
+def list_global_variables(project_path: str) -> list[VariableInfo]:
+    """List the resource-level global variables configured in an OpenPLC project.
+
+    This returns only configuration.resource.globalVariables; POU VAR_GLOBAL
+    declarations and named global variable lists (GVLs) are separate concepts
+    outside this tool.
+    """
+    return inspect_global_variables(project_path)
 
 
 @mcp.tool(annotations=_READ_ONLY)

@@ -91,7 +91,21 @@ For a cyclic Task, `get_execution_configuration()` preserves the original IEC `T
 
 A project with no execution configuration returns empty Task and Program Instance lists. If Task or Program Instance data is present but structurally malformed, the MCP raises a tool error rather than returning misleading data.
 
-`globalVariables` is physically adjacent to Tasks and Instances but is outside this inspection operation. The MCP also does not parse `TIME` literals, apply new priority constraints, validate references, or infer live runtime execution state.
+`globalVariables` is physically adjacent to Tasks and Instances but is outside this inspection operation; it is exposed by `list_global_variables()`. See below. The MCP also does not parse `TIME` literals, apply new priority constraints, validate references, or infer live runtime execution state.
+
+## Resource global variables
+
+`list_global_variables()` in `openplc/variables.py` reads only the resource-level global variables stored under:
+
+```text
+data.configuration.resource.globalVariables
+```
+
+with the same legacy `data.configurations.resource` fallback used for execution configuration. This lookup is shared by the execution and global-variable inspections through `get_configuration_resource()` in `openplc/project.py`.
+
+Each stored variable provides the data mapped into the public variable contract (`name`, declared `type`, `location`, `initialValue`, `documentation`). The containing resource defines the scope, so the MCP always reports `class: "global"` regardless of any stored class field, and reuses the same JSON type and empty-string normalization as legacy JSON POU variables.
+
+This operation is intentionally narrow. It does not scan POUs for `VAR_GLOBAL` declarations and it does not include named global variable lists (`globalVariableLists` / GVLs), which are separate domain concepts. Missing configuration or missing `globalVariables` yields an empty result; structurally malformed data is raised as a tool error.
 
 ## POU discovery
 

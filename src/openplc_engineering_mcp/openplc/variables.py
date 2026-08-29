@@ -7,6 +7,7 @@ from typing import Literal, TypedDict, cast
 from mcp.server.mcpserver.exceptions import ToolError
 
 from openplc_engineering_mcp.openplc.pous import read_pou
+from openplc_engineering_mcp.openplc.project import get_configuration_resource, load_project_document
 
 VariableClass = Literal["input", "output", "inOut", "external", "local", "temp", "global"]
 VariableInfo = TypedDict(
@@ -77,7 +78,7 @@ def _json_type(value: object) -> str:
     return declared_type
 
 
-def _json_variable(value: object, index: int) -> VariableInfo:
+def _json_variable(value: object, index: int, scope_class: VariableClass | None = None) -> VariableInfo:
     if not isinstance(value, dict):
         raise ValueError(f"JSON variable at index {index} is not an object")
 
@@ -85,13 +86,17 @@ def _json_variable(value: object, index: int) -> VariableInfo:
     if not isinstance(name, str) or not name.strip():
         raise ValueError(f"JSON variable at index {index} is missing a name")
 
-    variable_class = value.get("class")
-    if variable_class not in _VARIABLE_CLASSES.values():
-        raise ValueError(f'JSON variable "{name}" has an unsupported or missing class')
+    if scope_class is None:
+        variable_class = value.get("class")
+        if variable_class not in _VARIABLE_CLASSES.values():
+            raise ValueError(f'JSON variable "{name}" has an unsupported or missing class')
+        resolved_class = cast(VariableClass, variable_class)
+    else:
+        resolved_class = scope_class
 
     return {
         "name": name.strip(),
-        "class": cast(VariableClass, variable_class),
+        "class": resolved_class,
         "type": _json_type(value.get("type")),
         "location": _optional_text(value.get("location"), "location"),
         "initial_value": _optional_text(value.get("initialValue"), "initialValue"),
@@ -204,3 +209,23 @@ def list_variables(project_path: str, pou_name: str) -> list[VariableInfo]:
         return _source_variables(pou["content"])
     except ValueError as exc:
         raise ToolError(f'Could not read variables for POU "{pou["name"]}": {exc}') from exc
+
+
+def list_global_variables(project_path: str) -> list[VariableInfo]:
+    """List the resource-level global variables of an OpenPLC project in stored order."""
+    _, _, _, project = load_project_document(project_path)
+    resource = get_configuration_resource(project)
+    if resource is None:
+        return []
+
+    raw_variables = resource.get("globalVariables", [])
+    if not isinstance(raw_variables, list):
+        raise ToolError("project.json global variables must be an array")
+
+    try:
+        return [
+            _json_variable(variable, index, scope_class="global")
+            for index, variable in enumerate(raw_variables)
+        ]
+    except ValueError as exc:
+        raise ToolError(f"Could not read global variables: {exc}") from exc
