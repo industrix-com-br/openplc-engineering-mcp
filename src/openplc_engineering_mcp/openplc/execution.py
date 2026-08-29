@@ -54,6 +54,7 @@ def _execution_resource(project: dict[str, object]) -> dict[str, object] | None:
 
 
 def _parse_task(task: object, index: int) -> ExecutionTask:
+    """Parse and validate a single execution Task from the project document."""
     if not isinstance(task, dict):
         raise ToolError(f"project.json execution task {index} must be an object")
 
@@ -82,6 +83,7 @@ def _parse_task(task: object, index: int) -> ExecutionTask:
 
 
 def _parse_program_instance(instance: object, index: int) -> ProgramInstance:
+    """Parse and validate a single Program Instance from the project document."""
     if not isinstance(instance, dict):
         raise ToolError(f"project.json program instance {index} must be an object")
 

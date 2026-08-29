@@ -30,7 +30,15 @@ _SOURCE_SUFFIXES = {".st", ".il", ".ld", ".fbd", ".py", ".cpp", ".json"}
 def load_project_document(
     project_path: str,
 ) -> tuple[Path, str, ProjectType, dict[str, object]]:
-    """Load an OpenPLC project while retaining its parsed project.json document."""
+    """Load an OpenPLC project while retaining its parsed project.json document.
+
+    Returns:
+        The resolved project root, project name, project type, and the parsed project.json
+        document for domain inspections that need it.
+
+    Raises:
+        ToolError: If the project path or project.json is invalid.
+    """
     if not project_path.strip():
         raise ToolError("project_path must not be empty")
 
