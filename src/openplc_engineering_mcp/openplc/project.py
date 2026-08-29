@@ -1,3 +1,5 @@
+"""OpenPLC project loading, validation, and structure inspection."""
+
 import json
 from pathlib import Path
 from typing import Literal, TypedDict, cast
@@ -26,6 +28,14 @@ _SOURCE_SUFFIXES = {".st", ".il", ".ld", ".fbd", ".py", ".cpp", ".json"}
 
 
 def load_project(project_path: str) -> tuple[Path, str, ProjectType]:
+    """Load the basic metadata required from an OpenPLC Editor project.
+
+    Returns:
+        The resolved project root, project name, and project type.
+
+    Raises:
+        ToolError: If the project path or project.json is invalid.
+    """
     if not project_path.strip():
         raise ToolError("project_path must not be empty")
 
@@ -67,16 +77,10 @@ def load_project(project_path: str) -> tuple[Path, str, ProjectType]:
 
 
 def validate_project(project_path: str) -> ProjectValidation:
-    """Shallowly confirm a directory is a loadable OpenPLC Editor project.
+    """Check the MCP's shallow OpenPLC project preconditions.
 
-    Validation is intentionally limited to the MCP-local filesystem and basic
-    metadata preconditions required for file-oriented operations. Authoritative
-    project loading/validation semantics belong to OpenPLC and are reused via a
-    future ``openplc-cli`` step rather than reproduced here.
-
-    Unrecoverable failures (missing path/directory/``project.json``, malformed
-    JSON, unsupported ``meta.type``) surface as tool errors, while
-    ``warnings`` is reserved for recoverable conditions that OpenPLC loads.
+    Raises:
+        ToolError: If the project path or required metadata is invalid.
     """
     _, name, project_type = load_project(project_path)
     return {

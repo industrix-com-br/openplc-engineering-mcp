@@ -1,3 +1,5 @@
+"""OpenPLC POU variable extraction."""
+
 import json
 import re
 from typing import Literal, TypedDict, cast
@@ -98,6 +100,7 @@ def _json_variable(value: object, index: int) -> VariableInfo:
 
 
 def _json_variables(content: str) -> list[VariableInfo]:
+    """Extract variables from a supported JSON POU representation."""
     try:
         parsed = json.loads(content)
     except json.JSONDecodeError as exc:
@@ -128,6 +131,7 @@ def _json_variables(content: str) -> list[VariableInfo]:
 
 
 def _source_variables(content: str) -> list[VariableInfo]:
+    """Extract variables from supported source declaration blocks in declaration order."""
     variables: list[VariableInfo] = []
     current_class: VariableClass | None = None
     block_start_line: int | None = None
