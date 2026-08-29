@@ -36,6 +36,7 @@ _BLOCK_START_RE = re.compile(
     re.IGNORECASE,
 )
 _END_VAR_RE = re.compile(r"^\s*END_VAR\b", re.IGNORECASE)
+_POU_END_RE = re.compile(r"^\s*END_(PROGRAM|FUNCTION_BLOCK|FUNCTION)\b", re.IGNORECASE)
 _DECLARATION_RE = re.compile(
     r"^\s*(?P<name>\w+)\s*:\s*(?P<type>[\w\s\[\],.]+?)"
     r"(?:\s+AT\s+(?P<location>[\w\d._%]+))?\s*"
@@ -151,6 +152,9 @@ def _source_variables(content: str) -> list[VariableInfo]:
 
         if current_class is None:
             continue
+
+        if _POU_END_RE.match(line):
+            raise ValueError(f"variable block started on line {block_start_line} is missing END_VAR")
 
         declaration = _DECLARATION_RE.match(line) or _ALTERNATE_DECLARATION_RE.match(line)
         if declaration is None:
