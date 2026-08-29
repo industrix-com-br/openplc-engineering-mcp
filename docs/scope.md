@@ -2,13 +2,14 @@
 
 ## Current implementation
 
-The project is an early experimental MCP server for local OpenPLC engineering operations. It currently exposes eight tools:
+The project is an early experimental MCP server for local OpenPLC engineering operations. It currently exposes nine tools:
 
 - `get_project_structure` — inspect recognized project files;
 - `list_pous` — discover Programs, Function Blocks, and Functions;
 - `get_execution_configuration` — inspect configured Tasks and Program Instances;
 - `read_pou` — read a POU's preferred representation by domain name;
 - `list_variables` — inspect variables declared by a POU;
+- `list_global_variables` — inspect the project's resource-level global variables;
 - `validate_project` — check shallow local project preconditions;
 - `compile_project` — compile through `openplc-cli`;
 - `get_diagnostics` — return `stderr` diagnostics captured from the latest compilation in the current server process.
@@ -26,6 +27,7 @@ The implementation currently covers:
 - POU discovery;
 - POU content reading;
 - POU variable/interface discovery;
+- resource-level global variable inspection;
 - CLI compilation;
 - process-local compiler diagnostics;
 - stdio MCP transport.

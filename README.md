@@ -30,6 +30,7 @@ uv run pytest
 - `get_execution_configuration`
 - `read_pou`
 - `list_variables`
+- `list_global_variables`
 - `validate_project`
 - `compile_project`
 - `get_diagnostics`

@@ -15,7 +15,7 @@ OpenPLC Engineering MCP
         |
         +-- pous.py -------- local OpenPLC project files
         |
-        +-- variables.py --- POU variable declarations
+        +-- variables.py --- POU and resource global variable declarations
         |
         +-- compiler.py ---- openplc-cli
 ```
@@ -37,7 +37,7 @@ The server provides a small domain-oriented interface between an MCP-compatible 
 Responsible for:
 
 - creating the `MCPServer`;
-- registering the eight public MCP tools;
+- registering the nine public MCP tools;
 - applying tool annotations;
 - exposing the package entry point;
 - starting the stdio server.
@@ -51,6 +51,7 @@ Responsible for project-level behavior shared by the other OpenPLC modules:
 - resolving and checking project paths;
 - reading and validating the minimum metadata from `project.json`;
 - retaining the parsed project document for domain inspections that need it;
+- providing the shared current/legacy configuration-resource lookup;
 - enforcing the minimum project preconditions;
 - providing shallow project validation;
 - listing relevant project files;
@@ -60,7 +61,7 @@ Responsible for project-level behavior shared by the other OpenPLC modules:
 
 Responsible for configured execution-model inspection:
 
-- reading the execution resource from the validated project document;
+- reading the configuration resource from the validated project document through the shared project lookup;
 - supporting current `data.configuration` and legacy `data.configurations` storage;
 - validating the Task and Program Instance fields required by the public contract;
 - preserving cyclic IEC interval strings while returning no interval for interrupt Tasks;
@@ -84,6 +85,7 @@ Responsible for POU variable inspection:
 - extracting variables from recognized source declarations using the same block classes and restrictions the current OpenPLC Editor applies;
 - reading structured variables from legacy JSON-only POUs;
 - preserving declaration order and declaration-level type strings;
+- listing resource-level global variables from `configuration.resource.globalVariables`;
 - raising tool errors when declarations cannot be interpreted reliably.
 
 ### `openplc/compiler.py`
@@ -110,11 +112,11 @@ server.py
 
 openplc.execution ─► openplc.project
 openplc.pous ──────► openplc.project
-openplc.variables ─► openplc.pous
+openplc.variables ─► openplc.pous, openplc.project
 openplc.compiler ──► openplc.project
 ```
 
-`project.py` does not depend on the execution, POU, or compiler modules. It is the shared lower-level dependency for local project loading and recognized source-file discovery.
+`project.py` does not depend on the execution, POU, variable, or compiler modules. It is the shared lower-level dependency for local project loading, configuration-resource lookup, and recognized source-file discovery.
 
 There are no service, repository, adapter, client, or one-file-per-tool layers.
 
