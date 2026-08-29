@@ -36,6 +36,7 @@ Keep domain implementation behavior close to the implementation modules:
 
 - `tests/test_project.py` for project loading, validation, and structure inspection;
 - `tests/test_pous.py` for POU discovery behavior;
+- `tests/test_variables.py` for POU variable extraction behavior;
 - `tests/test_compiler.py` for CLI compilation and diagnostics.
 
 Direct domain tests are appropriate for implementation behavior. MCP registration behavior should remain in `test_server.py` rather than being repeated in every domain test.
