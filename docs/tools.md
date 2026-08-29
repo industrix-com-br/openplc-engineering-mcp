@@ -1,6 +1,6 @@
 # MCP tools
 
-The current server registers exactly six domain-oriented tools. All tools use `open_world_hint: false`. Inspection and diagnostics tools are read-only; `compile_project` is registered with `read_only_hint: false` because the OpenPLC CLI may write local build artifacts.
+The current server registers exactly seven domain-oriented tools. All tools use `open_world_hint: false`. Inspection and diagnostics tools are read-only; `compile_project` is registered with `read_only_hint: false` because the OpenPLC CLI may write local build artifacts.
 
 The public registrations live in `src/openplc_engineering_mcp/server.py`. OpenPLC behavior is grouped by responsibility under `src/openplc_engineering_mcp/openplc/`.
 
@@ -9,6 +9,7 @@ The public registrations live in `src/openplc_engineering_mcp/server.py`. OpenPL
 | `get_project_structure` | yes | Inspect recognized files in an OpenPLC project |
 | `list_pous` | yes | Discover Programs, Function Blocks, and Functions |
 | `read_pou` | yes | Read a POU by domain name without requiring its filesystem path |
+| `list_variables` | yes | Inspect variables declared by a POU |
 | `validate_project` | yes | Check the MCP's shallow project preconditions |
 | `compile_project` | no | Compile through `openplc-cli` |
 | `get_diagnostics` | yes | Return diagnostics captured from the latest compilation |
@@ -63,6 +64,54 @@ The caller identifies the POU by name rather than by filesystem path. `read_pou(
 An empty `pou_name`, an unknown POU name, or an unreadable source file is exposed as an MCP tool error. The first version intentionally performs no parsing, normalization, dependency analysis, or modification of the POU content.
 
 See [`openplc-projects.md`](openplc-projects.md) for the underlying project behavior.
+
+## `list_variables`
+
+Input:
+
+- `project_path: str`;
+- `pou_name: str`.
+
+Returns the variables declared by the selected POU in declaration order. Each item contains:
+
+```json
+{
+  "name": "Start",
+  "class": "input",
+  "type": "BOOL",
+  "location": null,
+  "initial_value": null,
+  "documentation": null
+}
+```
+
+Supported variable classes are:
+
+| OpenPLC declaration block | MCP class |
+| --- | --- |
+| `VAR_INPUT` | `input` |
+| `VAR_OUTPUT` | `output` |
+| `VAR_IN_OUT` | `inOut` |
+| `VAR_EXTERNAL` | `external` |
+| `VAR_TEMP` | `temp` |
+| `VAR_GLOBAL` | `global` |
+| `VAR` | `local` |
+
+The `type` field preserves the declared type as a domain-readable string such as `BOOL`, `TON`, or `ARRAY[0..9] OF INT`. Initial values remain declaration-level strings and are not evaluated. A declared `AT` binding is returned as `location`; absent location, initial value, or documentation is returned as `null`.
+
+`list_variables()` builds on `read_pou()` and therefore uses the same POU name resolution and representation preference. Recognized source representations are inspected for declaration blocks. A selected legacy JSON-only POU is read from its structured variable data rather than interpreted as IEC source text.
+
+A valid POU with no variable declarations returns an empty list. Empty or unknown POU names, unsupported JSON variable representations, and malformed declarations that prevent reliable extraction are MCP tool errors. Parse failures are not converted to an empty list.
+
+The first version intentionally does not provide:
+
+- variable creation or updates;
+- project-wide variable search or reference analysis;
+- runtime variable reads, forcing, or debug state;
+- dependency analysis;
+- a structured mirror of OpenPLC's internal type model.
+
+See [`openplc-projects.md`](openplc-projects.md) for the OpenPLC behavior this extraction depends on.
 
 ## `validate_project`
 
