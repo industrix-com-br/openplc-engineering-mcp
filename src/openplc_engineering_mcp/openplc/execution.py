@@ -4,7 +4,7 @@ from typing import Literal, TypedDict, cast
 
 from mcp.server.mcpserver.exceptions import ToolError
 
-from openplc_engineering_mcp.openplc.project import _load_project_document
+from openplc_engineering_mcp.openplc.project import load_project_document
 
 TaskTrigger = Literal["Cyclic", "Interrupt"]
 
@@ -101,7 +101,7 @@ def _parse_program_instance(instance: object, index: int) -> ProgramInstance:
 
 def get_execution_configuration(project_path: str) -> ExecutionConfiguration:
     """Return the execution tasks and program instances of an OpenPLC project."""
-    _, _, _, project = _load_project_document(project_path)
+    _, _, _, project = load_project_document(project_path)
     resource = _execution_resource(project)
     if resource is None:
         return {"tasks": [], "program_instances": []}

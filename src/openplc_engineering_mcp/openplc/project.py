@@ -27,7 +27,7 @@ _PROJECT_TYPES = {"plc-project", "plc-library", "PLC"}
 _SOURCE_SUFFIXES = {".st", ".il", ".ld", ".fbd", ".py", ".cpp", ".json"}
 
 
-def _load_project_document(
+def load_project_document(
     project_path: str,
 ) -> tuple[Path, str, ProjectType, dict[str, object]]:
     """Load an OpenPLC project while retaining its parsed project.json document."""
@@ -80,7 +80,7 @@ def load_project(project_path: str) -> tuple[Path, str, ProjectType]:
     Raises:
         ToolError: If the project path or project.json is invalid.
     """
-    root, name, project_type, _ = _load_project_document(project_path)
+    root, name, project_type, _ = load_project_document(project_path)
     return root, name, project_type
 
 
