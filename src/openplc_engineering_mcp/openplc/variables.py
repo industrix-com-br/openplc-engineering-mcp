@@ -38,14 +38,14 @@ _BLOCK_START_RE = re.compile(
 _END_VAR_RE = re.compile(r"^\s*END_VAR\b", re.IGNORECASE)
 _POU_END_RE = re.compile(r"^\s*END_(PROGRAM|FUNCTION_BLOCK|FUNCTION)\b", re.IGNORECASE)
 _DECLARATION_RE = re.compile(
-    r"^\s*(?P<name>\w+)\s*:\s*(?P<type>[\w\s\[\],.]+?)"
+    r"^\s*(?P<names>\w+(?:\s*,\s*\w+)*)\s*:\s*(?P<type>[\w\s\[\],.]+?)"
     r"(?:\s+AT\s+(?P<location>[\w\d._%]+))?\s*"
     r"(?::=\s*(?P<initial_value>[^;]+?))?\s*;\s*"
     r"(?:\(\*\s*(?P<documentation>.*?)\s*\*\))?\s*$",
     re.IGNORECASE,
 )
 _ALTERNATE_DECLARATION_RE = re.compile(
-    r"^\s*(?P<name>\w+)\s+AT\s+(?P<location>[\w\d._%]+)\s*:\s*"
+    r"^\s*(?P<names>\w+)\s+AT\s+(?P<location>[\w\d._%]+)\s*:\s*"
     r"(?P<type>[\w\s\[\],.]+?)\s*(?::=\s*(?P<initial_value>[^;]+?))?\s*;\s*"
     r"(?:\(\*\s*(?P<documentation>.*?)\s*\*\))?\s*$",
     re.IGNORECASE,
@@ -172,16 +172,17 @@ def _source_variables(content: str) -> list[VariableInfo]:
             )
 
         documentation = declaration.group("documentation")
-        variables.append(
-            {
-                "name": declaration.group("name").strip(),
-                "class": current_class,
-                "type": declaration.group("type").strip(),
-                "location": location.strip() if location else None,
-                "initial_value": initial_value.strip() if initial_value else None,
-                "documentation": documentation.strip() if documentation else None,
-            }
-        )
+        for name in declaration.group("names").split(","):
+            variables.append(
+                {
+                    "name": name.strip(),
+                    "class": current_class,
+                    "type": declaration.group("type").strip(),
+                    "location": location.strip() if location else None,
+                    "initial_value": initial_value.strip() if initial_value else None,
+                    "documentation": documentation.strip() if documentation else None,
+                }
+            )
 
     if current_class is not None:
         raise ValueError(f"variable block started on line {block_start_line} is missing END_VAR")

@@ -55,6 +55,32 @@ def test_list_variables_reads_basic_local_variable(tmp_path: Path) -> None:
     ]
 
 
+def test_list_variables_expands_comma_separated_names_in_order(tmp_path: Path) -> None:
+    project = make_source_project(
+        tmp_path / "project",
+        "FUNCTION_BLOCK Motor\nVAR_INPUT\n    Start, Stop : BOOL;\nEND_VAR\nEND_FUNCTION_BLOCK\n",
+    )
+
+    assert list_variables(str(project), "Motor") == [
+        {
+            "name": "Start",
+            "class": "input",
+            "type": "BOOL",
+            "location": None,
+            "initial_value": None,
+            "documentation": None,
+        },
+        {
+            "name": "Stop",
+            "class": "input",
+            "type": "BOOL",
+            "location": None,
+            "initial_value": None,
+            "documentation": None,
+        },
+    ]
+
+
 def test_list_variables_preserves_interface_classes_and_order(tmp_path: Path) -> None:
     project = make_source_project(
         tmp_path / "project",
