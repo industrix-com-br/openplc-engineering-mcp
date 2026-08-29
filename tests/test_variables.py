@@ -7,7 +7,13 @@ from mcp.server.mcpserver.exceptions import ToolError
 from openplc_engineering_mcp.openplc.variables import list_variables
 
 
-def make_source_project(root: Path, content: str, *, name: str = "Motor", pou_dir: str = "function-blocks") -> Path:
+def make_source_project(
+    root: Path,
+    content: str,
+    *,
+    name: str = "Motor",
+    pou_dir: str = "function-blocks",
+) -> Path:
     (root / "pous" / pou_dir).mkdir(parents=True)
     (root / "project.json").write_text(
         json.dumps({"meta": {"name": "Example", "type": "plc-project"}}), encoding="utf-8"
