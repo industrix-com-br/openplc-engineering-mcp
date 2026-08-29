@@ -91,6 +91,32 @@ Discovery and reading share the same containment rule: a source file whose resol
 
 An empty POU name, an unknown POU name, or an unreadable selected source is raised as a tool error.
 
+## POU variable declarations
+
+`list_variables()` in `openplc/variables.py` operates on the representation already selected by `read_pou()` rather than locating POU files independently.
+
+For recognized source representations, the current OpenPLC Editor represents POU variables in declaration blocks using these classes:
+
+```text
+VAR_INPUT     -> input
+VAR_OUTPUT    -> output
+VAR_IN_OUT    -> inOut
+VAR_EXTERNAL  -> external
+VAR_TEMP      -> temp
+VAR_GLOBAL    -> global
+VAR            -> local
+```
+
+The MCP extracts only the declaration information required by its public contract: name, class, declared type, optional location, optional initial value, and optional inline documentation. It preserves declaration order and keeps type and initial-value expressions as strings rather than recreating OpenPLC's internal structured type model or evaluating IEC literals.
+
+The OpenPLC Editor currently allows located declarations in local and global blocks; interface, external, and temporary classes do not carry physical locations. The MCP rejects a located declaration in those classes rather than reporting a misleading variable representation.
+
+Current OpenPLC project parsing also supports legacy JSON POU files whose interface variables are already structured. When `read_pou()` selects a JSON-only POU, `list_variables()` reads those structured variables and maps the OpenPLC type object's declared `value` to the MCP's type string.
+
+A source POU with no variable blocks returns no variables. If a declaration block exists but cannot be interpreted reliably, the MCP raises a tool error instead of treating the POU as having an empty interface. This keeps malformed declaration text distinct from a valid POU with no declarations.
+
+This behavior is intentionally narrow. The MCP does not reproduce the complete IEC 61131-3 grammar or the complete OpenPLC project model.
+
 ## Validation semantics
 
 `validate_project()` is deliberately shallow.

@@ -35,11 +35,15 @@ async def test_server_and_tools_are_discoverable(client: Client) -> None:
         "get_diagnostics",
         "get_project_structure",
         "list_pous",
+        "list_variables",
         "read_pou",
         "validate_project",
     }
     assert tools["compile_project"].annotations
     assert tools["compile_project"].annotations.read_only_hint is False
+    assert tools["list_variables"].annotations
+    assert tools["list_variables"].annotations.read_only_hint is True
+    assert tools["list_variables"].annotations.open_world_hint is False
     assert all(tool.annotations and tool.annotations.open_world_hint is False for tool in listed.tools)
     assert all(
         tool.annotations and tool.annotations.read_only_hint
@@ -90,6 +94,58 @@ async def test_read_pou_returns_structured_content(client: Client, tmp_path: Pat
         "path": "pous/programs/main.st",
         "content": "PROGRAM main\nEND_PROGRAM\n",
     }
+
+
+@pytest.mark.anyio
+async def test_list_variables_returns_structured_content(client: Client, tmp_path: Path) -> None:
+    project = tmp_path / "project"
+    (project / "pous" / "function-blocks").mkdir(parents=True)
+    (project / "project.json").write_text(
+        json.dumps({"meta": {"name": "Minimal", "type": "plc-project"}}), encoding="utf-8"
+    )
+    (project / "pous" / "function-blocks" / "Motor.st").write_text(
+        """FUNCTION_BLOCK Motor
+VAR_INPUT
+    Start : BOOL;
+END_VAR
+END_FUNCTION_BLOCK
+""",
+        encoding="utf-8",
+    )
+
+    result = await client.call_tool(
+        "list_variables", {"project_path": str(project), "pou_name": "Motor"}
+    )
+
+    assert not result.is_error
+    assert result.structured_content == {
+        "result": [
+            {
+                "name": "Start",
+                "class": "input",
+                "type": "BOOL",
+                "location": None,
+                "initial_value": None,
+                "documentation": None,
+            }
+        ]
+    }
+
+
+@pytest.mark.anyio
+async def test_list_variables_errors_are_exposed_through_mcp(client: Client, tmp_path: Path) -> None:
+    project = tmp_path / "project"
+    project.mkdir()
+    (project / "project.json").write_text(
+        json.dumps({"meta": {"name": "Minimal", "type": "plc-project"}}), encoding="utf-8"
+    )
+
+    result = await client.call_tool(
+        "list_variables", {"project_path": str(project), "pou_name": "Missing"}
+    )
+
+    assert result.is_error
+    assert "POU not found" in tool_text(result)
 
 
 @pytest.mark.anyio

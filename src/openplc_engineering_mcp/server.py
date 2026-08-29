@@ -10,6 +10,8 @@ from openplc_engineering_mcp.openplc.pous import read_pou as inspect_pou
 from openplc_engineering_mcp.openplc.project import ProjectStructure, ProjectValidation
 from openplc_engineering_mcp.openplc.project import get_project_structure as inspect_project_structure
 from openplc_engineering_mcp.openplc.project import validate_project as inspect_project
+from openplc_engineering_mcp.openplc.variables import VariableInfo
+from openplc_engineering_mcp.openplc.variables import list_variables as inspect_variables
 
 mcp = MCPServer("openplc-engineering")
 _READ_ONLY = ToolAnnotations(read_only_hint=True, open_world_hint=False)
@@ -32,6 +34,12 @@ def list_pous(project_path: str) -> list[PouInfo]:
 def read_pou(project_path: str, pou_name: str) -> PouContent:
     """Read a POU from an OpenPLC project by name."""
     return inspect_pou(project_path, pou_name)
+
+
+@mcp.tool(annotations=_READ_ONLY)
+def list_variables(project_path: str, pou_name: str) -> list[VariableInfo]:
+    """List variables declared by a POU in an OpenPLC project."""
+    return inspect_variables(project_path, pou_name)
 
 
 @mcp.tool(annotations=_READ_ONLY)

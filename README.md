@@ -28,6 +28,7 @@ uv run pytest
 - `get_project_structure`
 - `list_pous`
 - `read_pou`
+- `list_variables`
 - `validate_project`
 - `compile_project`
 - `get_diagnostics`
@@ -42,6 +43,6 @@ The source documentation remains in [`docs/`](docs/) and [`docs/index.md`](docs/
 
 ## Scope
 
-The current version focuses on project and POU inspection and shallow project validation, plus compilation delegated to `openplc-cli`. Project modification, deployment, runtime control, variable forcing, authentication, HTTP transport, and generic shell/filesystem tools are not implemented.
+The current version focuses on project, POU, and variable inspection and shallow project validation, plus compilation delegated to `openplc-cli`. Project modification, variable modification, deployment, runtime control, variable forcing, authentication, HTTP transport, and generic shell/filesystem tools are not implemented.
 
 See [`docs/scope.md`](docs/scope.md) for the current boundary.

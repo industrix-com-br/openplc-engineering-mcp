@@ -13,6 +13,8 @@ OpenPLC Engineering MCP
         |
         +-- pous.py ------- local OpenPLC project files
         |
+        +-- variables.py -- POU variable declarations
+        |
         +-- compiler.py --- openplc-cli
 ```
 
@@ -33,7 +35,7 @@ The server provides a small domain-oriented interface between an MCP-compatible 
 Responsible for:
 
 - creating the `MCPServer`;
-- registering the six public MCP tools;
+- registering the seven public MCP tools;
 - applying tool annotations;
 - exposing the package entry point;
 - starting the stdio server.
@@ -61,6 +63,16 @@ Responsible for POU behavior:
 - preferring a source representation over JSON when both exist;
 - returning deduplicated, sorted POU information.
 
+### `openplc/variables.py`
+
+Responsible for POU variable inspection:
+
+- resolving the POU through the shared `read_pou()` behavior;
+- extracting variables from recognized source declarations using the same block classes and restrictions the current OpenPLC Editor applies;
+- reading structured variables from legacy JSON-only POUs;
+- preserving declaration order and declaration-level type strings;
+- raising tool errors when declarations cannot be interpreted reliably.
+
 ### `openplc/compiler.py`
 
 Responsible for compiler behavior:
@@ -79,9 +91,11 @@ A separate CLI abstraction is not needed while compilation is the only feature t
 server.py
    ├── openplc.project
    ├── openplc.pous
+   ├── openplc.variables
    └── openplc.compiler
 
 openplc.pous ──────► openplc.project
+openplc.variables ─► openplc.pous
 openplc.compiler ──► openplc.project
 ```
 
