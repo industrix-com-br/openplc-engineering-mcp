@@ -4,7 +4,7 @@ from pathlib import Path
 import pytest
 from mcp.server.mcpserver.exceptions import ToolError
 
-from openplc_engineering_mcp.openplc.variables import list_variables
+from openplc_engineering_mcp.openplc.variables import list_global_variables, list_variables
 
 
 def make_source_project(
@@ -350,3 +350,138 @@ END_FUNCTION
     variables = list_variables(str(project), "Calculate")
 
     assert [variable["name"] for variable in variables] == ["Value"]
+
+
+def make_configuration_project(root: Path, resource: dict[str, object], *, legacy: bool = False) -> Path:
+    root.mkdir()
+    configuration_field = "configurations" if legacy else "configuration"
+    (root / "project.json").write_text(
+        json.dumps(
+            {
+                "meta": {"name": "Example", "type": "plc-project"},
+                "data": {configuration_field: {"resource": resource}},
+            }
+        ),
+        encoding="utf-8",
+    )
+    return root
+
+
+GLOBAL_VARIABLES: list[dict[str, object]] = [
+    {
+        "name": "EmergencyStop",
+        "type": {"definition": "base-type", "value": "BOOL"},
+        "location": "%IX0.0",
+        "initialValue": "",
+        "documentation": "Emergency stop input",
+    },
+    {
+        "name": "CycleCount",
+        "type": "INT",
+        "location": "",
+        "initialValue": "0",
+        "documentation": "",
+    },
+]
+
+
+def test_list_global_variables_returns_resource_global_variables(tmp_path: Path) -> None:
+    project = make_configuration_project(tmp_path / "project", {"globalVariables": GLOBAL_VARIABLES})
+
+    assert list_global_variables(str(project)) == [
+        {
+            "name": "EmergencyStop",
+            "class": "global",
+            "type": "BOOL",
+            "location": "%IX0.0",
+            "initial_value": None,
+            "documentation": "Emergency stop input",
+        },
+        {
+            "name": "CycleCount",
+            "class": "global",
+            "type": "INT",
+            "location": None,
+            "initial_value": "0",
+            "documentation": None,
+        },
+    ]
+
+
+def test_list_global_variables_preserves_stored_order(tmp_path: Path) -> None:
+    project = make_configuration_project(tmp_path / "project", {"globalVariables": GLOBAL_VARIABLES})
+
+    names = [variable["name"] for variable in list_global_variables(str(project))]
+
+    assert names == ["EmergencyStop", "CycleCount"]
+
+
+def test_list_global_variables_forces_global_class(tmp_path: Path) -> None:
+    variable = {
+        "name": "Counter",
+        "class": "local",
+        "type": "INT",
+        "location": "",
+        "initialValue": "",
+        "documentation": "",
+    }
+    project = make_configuration_project(tmp_path / "project", {"globalVariables": [variable]})
+
+    assert list_global_variables(str(project))[0]["class"] == "global"
+
+
+def test_list_global_variables_supports_legacy_configurations(tmp_path: Path) -> None:
+    project = make_configuration_project(
+        tmp_path / "project",
+        {"globalVariables": [GLOBAL_VARIABLES[1]]},
+        legacy=True,
+    )
+
+    variables = list_global_variables(str(project))
+
+    assert variables[0]["name"] == "CycleCount"
+    assert variables[0]["initial_value"] == "0"
+
+
+def test_list_global_variables_returns_empty_list_without_configuration(tmp_path: Path) -> None:
+    root = tmp_path / "project"
+    root.mkdir()
+    (root / "project.json").write_text(
+        json.dumps({"meta": {"name": "Example", "type": "plc-project"}}), encoding="utf-8"
+    )
+
+    assert list_global_variables(str(root)) == []
+
+
+def test_list_global_variables_returns_empty_list_when_global_variables_absent(tmp_path: Path) -> None:
+    project = make_configuration_project(tmp_path / "project", {"tasks": []})
+
+    assert list_global_variables(str(project)) == []
+
+
+@pytest.mark.parametrize(
+    ("variable", "match"),
+    [
+        ("not-an-object", "is not an object"),
+        ({"type": "INT"}, "missing a name"),
+        ({"name": "Counter"}, "missing a declared type"),
+    ],
+)
+def test_list_global_variables_rejects_malformed_variables(
+    tmp_path: Path, variable: object, match: str
+) -> None:
+    project = make_configuration_project(
+        tmp_path / "project", {"globalVariables": [variable]}
+    )
+
+    with pytest.raises(ToolError, match=match):
+        list_global_variables(str(project))
+
+
+def test_list_global_variables_rejects_non_array_global_variables(tmp_path: Path) -> None:
+    project = make_configuration_project(
+        tmp_path / "project", {"globalVariables": {"name": "Counter"}}
+    )
+
+    with pytest.raises(ToolError, match="global variables must be an array"):
+        list_global_variables(str(project))

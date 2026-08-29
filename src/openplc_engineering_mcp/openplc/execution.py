@@ -4,7 +4,7 @@ from typing import Literal, TypedDict, cast
 
 from mcp.server.mcpserver.exceptions import ToolError
 
-from openplc_engineering_mcp.openplc.project import load_project_document
+from openplc_engineering_mcp.openplc.project import get_configuration_resource, load_project_document
 
 TaskTrigger = Literal["Cyclic", "Interrupt"]
 
@@ -25,32 +25,6 @@ class ProgramInstance(TypedDict):
 class ExecutionConfiguration(TypedDict):
     tasks: list[ExecutionTask]
     program_instances: list[ProgramInstance]
-
-
-def _execution_resource(project: dict[str, object]) -> dict[str, object] | None:
-    """Return the current or legacy execution resource when present."""
-    data = project.get("data")
-    if data is None:
-        return None
-    if not isinstance(data, dict):
-        raise ToolError("project.json data must be an object")
-
-    configuration = data.get("configuration")
-    configuration_field = "configuration"
-    if configuration is None:
-        configuration = data.get("configurations")
-        configuration_field = "configurations"
-    if configuration is None:
-        return None
-    if not isinstance(configuration, dict):
-        raise ToolError(f"project.json data.{configuration_field} must be an object")
-
-    resource = configuration.get("resource")
-    if resource is None:
-        return None
-    if not isinstance(resource, dict):
-        raise ToolError(f"project.json data.{configuration_field}.resource must be an object")
-    return cast(dict[str, object], resource)
 
 
 def _parse_task(task: object, index: int) -> ExecutionTask:
@@ -104,7 +78,7 @@ def _parse_program_instance(instance: object, index: int) -> ProgramInstance:
 def get_execution_configuration(project_path: str) -> ExecutionConfiguration:
     """Return the execution tasks and program instances of an OpenPLC project."""
     _, _, _, project = load_project_document(project_path)
-    resource = _execution_resource(project)
+    resource = get_configuration_resource(project)
     if resource is None:
         return {"tasks": [], "program_instances": []}
 

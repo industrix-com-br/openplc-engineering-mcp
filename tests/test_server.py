@@ -35,11 +35,15 @@ async def test_server_and_tools_are_discoverable(client: Client) -> None:
         "get_diagnostics",
         "get_execution_configuration",
         "get_project_structure",
+        "list_global_variables",
         "list_pous",
         "list_variables",
         "read_pou",
         "validate_project",
     }
+    assert tools["list_global_variables"].annotations
+    assert tools["list_global_variables"].annotations.read_only_hint is True
+    assert tools["list_global_variables"].annotations.open_world_hint is False
     assert tools["compile_project"].annotations
     assert tools["compile_project"].annotations.read_only_hint is False
     assert tools["get_execution_configuration"].annotations
@@ -230,6 +234,75 @@ async def test_list_variables_errors_are_exposed_through_mcp(client: Client, tmp
 
     assert result.is_error
     assert "POU not found" in tool_text(result)
+
+
+@pytest.mark.anyio
+async def test_list_global_variables_returns_structured_content(
+    client: Client, tmp_path: Path
+) -> None:
+    project = tmp_path / "project"
+    project.mkdir()
+    (project / "project.json").write_text(
+        json.dumps(
+            {
+                "meta": {"name": "Minimal", "type": "plc-project"},
+                "data": {
+                    "configuration": {
+                        "resource": {
+                            "globalVariables": [
+                                {
+                                    "name": "EmergencyStop",
+                                    "type": {"definition": "base-type", "value": "BOOL"},
+                                    "location": "%IX0.0",
+                                    "initialValue": "",
+                                    "documentation": "Emergency stop input",
+                                }
+                            ]
+                        }
+                    }
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    result = await client.call_tool("list_global_variables", {"project_path": str(project)})
+
+    assert not result.is_error
+    assert result.structured_content == {
+        "result": [
+            {
+                "name": "EmergencyStop",
+                "class": "global",
+                "type": "BOOL",
+                "location": "%IX0.0",
+                "initial_value": None,
+                "documentation": "Emergency stop input",
+            }
+        ]
+    }
+
+
+@pytest.mark.anyio
+async def test_list_global_variables_errors_are_exposed_through_mcp(
+    client: Client, tmp_path: Path
+) -> None:
+    project = tmp_path / "project"
+    project.mkdir()
+    (project / "project.json").write_text(
+        json.dumps(
+            {
+                "meta": {"name": "Minimal", "type": "plc-project"},
+                "data": {"configuration": {"resource": {"globalVariables": {}}}},
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    result = await client.call_tool("list_global_variables", {"project_path": str(project)})
+
+    assert result.is_error
+    assert "global variables must be an array" in tool_text(result)
 
 
 @pytest.mark.anyio

@@ -92,6 +92,40 @@ def load_project(project_path: str) -> tuple[Path, str, ProjectType]:
     return root, name, project_type
 
 
+def get_configuration_resource(project: dict[str, object]) -> dict[str, object] | None:
+    """Return the current or legacy configuration resource of a parsed project document.
+
+    Returns:
+        The ``data.configuration.resource`` object, falling back to the legacy
+        ``data.configurations.resource`` object, or ``None`` when neither is present.
+
+    Raises:
+        ToolError: If any part of the configuration resource path has an invalid type.
+    """
+    data = project.get("data")
+    if data is None:
+        return None
+    if not isinstance(data, dict):
+        raise ToolError("project.json data must be an object")
+
+    configuration = data.get("configuration")
+    configuration_field = "configuration"
+    if configuration is None:
+        configuration = data.get("configurations")
+        configuration_field = "configurations"
+    if configuration is None:
+        return None
+    if not isinstance(configuration, dict):
+        raise ToolError(f"project.json data.{configuration_field} must be an object")
+
+    resource = configuration.get("resource")
+    if resource is None:
+        return None
+    if not isinstance(resource, dict):
+        raise ToolError(f"project.json data.{configuration_field}.resource must be an object")
+    return cast(dict[str, object], resource)
+
+
 def validate_project(project_path: str) -> ProjectValidation:
     """Check the MCP's shallow OpenPLC project preconditions.
 
