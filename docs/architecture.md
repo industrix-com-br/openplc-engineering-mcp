@@ -9,13 +9,15 @@ MCP Host / LLM Agent
         v
 OpenPLC Engineering MCP
         |
-        +-- project.py ---- local OpenPLC project files
+        +-- project.py ----- local OpenPLC project files
         |
-        +-- pous.py ------- local OpenPLC project files
+        +-- execution.py --- execution configuration in project.json
         |
-        +-- variables.py -- POU variable declarations
+        +-- pous.py -------- local OpenPLC project files
         |
-        +-- compiler.py --- openplc-cli
+        +-- variables.py --- POU variable declarations
+        |
+        +-- compiler.py ---- openplc-cli
 ```
 
 The server provides a small domain-oriented interface between an MCP-compatible agent and a local OpenPLC engineering environment.
@@ -35,7 +37,7 @@ The server provides a small domain-oriented interface between an MCP-compatible 
 Responsible for:
 
 - creating the `MCPServer`;
-- registering the seven public MCP tools;
+- registering the eight public MCP tools;
 - applying tool annotations;
 - exposing the package entry point;
 - starting the stdio server.
@@ -47,11 +49,22 @@ It should stay thin. OpenPLC-specific behavior belongs in the `openplc` package.
 Responsible for project-level behavior shared by the other OpenPLC modules:
 
 - resolving and checking project paths;
-- reading basic metadata from `project.json`;
+- reading and validating the minimum metadata from `project.json`;
+- retaining the parsed project document for domain inspections that need it;
 - enforcing the minimum project preconditions;
 - providing shallow project validation;
 - listing relevant project files;
 - providing the shared recognized-source-file scan used by POU discovery.
+
+### `openplc/execution.py`
+
+Responsible for configured execution-model inspection:
+
+- reading the execution resource from the validated project document;
+- supporting current `data.configuration` and legacy `data.configurations` storage;
+- validating the Task and Program Instance fields required by the public contract;
+- preserving cyclic IEC interval strings while returning no interval for interrupt Tasks;
+- returning only Tasks and Program Instances, not neighboring configuration data.
 
 ### `openplc/pous.py`
 
@@ -90,16 +103,18 @@ A separate CLI abstraction is not needed while compilation is the only feature t
 ```text
 server.py
    ├── openplc.project
+   ├── openplc.execution
    ├── openplc.pous
    ├── openplc.variables
    └── openplc.compiler
 
+openplc.execution ─► openplc.project
 openplc.pous ──────► openplc.project
 openplc.variables ─► openplc.pous
 openplc.compiler ──► openplc.project
 ```
 
-`project.py` does not depend on the POU or compiler modules. It is the shared lower-level dependency for local project loading and recognized source-file discovery.
+`project.py` does not depend on the execution, POU, or compiler modules. It is the shared lower-level dependency for local project loading and recognized source-file discovery.
 
 There are no service, repository, adapter, client, or one-file-per-tool layers.
 

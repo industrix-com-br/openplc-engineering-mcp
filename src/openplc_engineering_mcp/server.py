@@ -6,6 +6,10 @@ from mcp.types import ToolAnnotations
 from openplc_engineering_mcp.openplc.compiler import CompileResult
 from openplc_engineering_mcp.openplc.compiler import compile_project as compile_openplc_project
 from openplc_engineering_mcp.openplc.compiler import get_diagnostics as read_compile_diagnostics
+from openplc_engineering_mcp.openplc.execution import ExecutionConfiguration
+from openplc_engineering_mcp.openplc.execution import (
+    get_execution_configuration as inspect_execution_configuration,
+)
 from openplc_engineering_mcp.openplc.pous import PouContent, PouInfo
 from openplc_engineering_mcp.openplc.pous import list_pous as inspect_pous
 from openplc_engineering_mcp.openplc.pous import read_pou as inspect_pou
@@ -30,6 +34,12 @@ def get_project_structure(project_path: str) -> ProjectStructure:
 def list_pous(project_path: str) -> list[PouInfo]:
     """List the programs, function blocks, and functions in an OpenPLC project."""
     return inspect_pous(project_path)
+
+
+@mcp.tool(annotations=_READ_ONLY)
+def get_execution_configuration(project_path: str) -> ExecutionConfiguration:
+    """Return the execution tasks and program instances of an OpenPLC project."""
+    return inspect_execution_configuration(project_path)
 
 
 @mcp.tool(annotations=_READ_ONLY)

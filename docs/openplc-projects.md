@@ -53,6 +53,46 @@ Only `.dt` files are included from `datatypes/`.
 
 Returned file paths are project-relative, use POSIX separators, are deduplicated, and are sorted.
 
+## Execution configuration
+
+The current OpenPLC Editor stores the project execution configuration under:
+
+```text
+data
+└── configuration
+    └── resource
+        ├── tasks
+        ├── instances
+        └── globalVariables
+```
+
+Its project loader also accepts the legacy `data.configurations` field. The MCP follows the same compatibility rule: `data.configuration` is preferred when present, with `data.configurations` used as the legacy fallback.
+
+A Task contains the execution fields used by this MCP:
+
+```text
+name: string
+triggering: Cyclic | Interrupt
+interval: string
+priority: integer
+```
+
+A Program Instance contains:
+
+```text
+name: string
+task: string
+program: string
+```
+
+The instance `task` field identifies the configured Task, while `program` identifies the Program POU to instantiate. The MCP preserves these references as stored and does not independently prove that the referenced Task or Program exists.
+
+For a cyclic Task, `get_execution_configuration()` preserves the original IEC `TIME` interval string such as `T#20ms` or `T#1s`. For an interrupt Task, the public MCP contract returns `interval: null` rather than exposing the stored interval field as cyclic timing.
+
+A project with no execution configuration returns empty Task and Program Instance lists. If Task or Program Instance data is present but structurally malformed, the MCP raises a tool error rather than returning misleading data.
+
+`globalVariables` is physically adjacent to Tasks and Instances but is outside this inspection operation. The MCP also does not parse `TIME` literals, apply new priority constraints, validate references, or infer live runtime execution state.
+
 ## POU discovery
 
 `list_pous()` in `openplc/pous.py` recursively searches:
