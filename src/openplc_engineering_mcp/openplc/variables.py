@@ -159,9 +159,13 @@ def _source_variables(content: str) -> list[VariableInfo]:
         location = declaration.group("location")
         initial_value = declaration.group("initial_value")
         if location and current_class in _DISALLOWED_LOCATION_CLASSES:
-            raise ValueError(f'location is not allowed for variable class "{current_class}" on line {line_number}')
+            raise ValueError(
+                f'location is not allowed for variable class "{current_class}" on line {line_number}'
+            )
         if initial_value and current_class == "external":
-            raise ValueError(f'initial value is not allowed for variable class "external" on line {line_number}')
+            raise ValueError(
+                f'initial value is not allowed for variable class "external" on line {line_number}'
+            )
 
         documentation = declaration.group("documentation")
         variables.append(
