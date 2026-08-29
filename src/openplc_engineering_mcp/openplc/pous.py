@@ -1,3 +1,5 @@
+"""OpenPLC POU discovery and reading."""
+
 from pathlib import Path
 from typing import Literal, TypedDict
 
@@ -43,6 +45,7 @@ def _is_contained(root: Path, path: Path) -> bool:
 
 
 def _list_pous(root: Path) -> list[PouInfo]:
+    """List POUs, preferring source files over JSON representations with the same name."""
     by_name: dict[str, PouInfo] = {}
 
     for pou_type, relative_dir in _POU_DIRECTORIES:
@@ -70,7 +73,7 @@ def list_pous(project_path: str) -> list[PouInfo]:
 
 
 def read_pou(project_path: str, pou_name: str) -> PouContent:
-    """Read the preferred representation of a POU by name."""
+    """Read a POU by name, preferring its source representation when available."""
     if not pou_name.strip():
         raise ToolError("pou_name must not be empty")
 

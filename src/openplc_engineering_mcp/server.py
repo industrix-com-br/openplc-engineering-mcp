@@ -1,3 +1,5 @@
+"""MCP tool registration and stdio server entry point."""
+
 from mcp.server import MCPServer
 from mcp.types import ToolAnnotations
 
@@ -61,6 +63,7 @@ def get_diagnostics(project_path: str) -> list[str]:
 
 
 def main() -> None:
+    """Run the MCP server over stdio."""
     mcp.run()
 
 

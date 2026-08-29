@@ -1,3 +1,5 @@
+"""OpenPLC CLI compilation and process-local diagnostics."""
+
 import json
 import subprocess
 from typing import TypedDict
@@ -17,7 +19,7 @@ _LAST_DIAGNOSTICS: dict[str, list[str]] = {}
 
 
 def compile_project(project_path: str) -> CompileResult:
-    """Compile an OpenPLC project with the official OpenPLC Editor CLI."""
+    """Compile an OpenPLC project and cache stderr diagnostics for this process."""
     root, _, _ = load_project(project_path)
 
     try:
@@ -49,7 +51,7 @@ def compile_project(project_path: str) -> CompileResult:
 
 
 def get_diagnostics(project_path: str) -> list[str]:
-    """Return diagnostics captured from the project's most recent compilation."""
+    """Return diagnostics from the project's most recent compilation in this process."""
     root, _, _ = load_project(project_path)
     try:
         return _LAST_DIAGNOSTICS[str(root)]
