@@ -33,6 +33,7 @@ async def test_server_and_tools_are_discoverable(client: Client) -> None:
     assert set(tools) == {
         "compile_project",
         "get_diagnostics",
+        "get_execution_configuration",
         "get_project_structure",
         "list_pous",
         "list_variables",
@@ -41,6 +42,9 @@ async def test_server_and_tools_are_discoverable(client: Client) -> None:
     }
     assert tools["compile_project"].annotations
     assert tools["compile_project"].annotations.read_only_hint is False
+    assert tools["get_execution_configuration"].annotations
+    assert tools["get_execution_configuration"].annotations.read_only_hint is True
+    assert tools["get_execution_configuration"].annotations.open_world_hint is False
     assert tools["list_variables"].annotations
     assert tools["list_variables"].annotations.read_only_hint is True
     assert tools["list_variables"].annotations.open_world_hint is False
@@ -69,6 +73,86 @@ async def test_tool_call_returns_structured_content(client: Client, tmp_path: Pa
         "type": "plc-project",
         "warnings": [],
     }
+
+
+@pytest.mark.anyio
+async def test_execution_configuration_returns_structured_content(
+    client: Client, tmp_path: Path
+) -> None:
+    project = tmp_path / "project"
+    project.mkdir()
+    (project / "project.json").write_text(
+        json.dumps(
+            {
+                "meta": {"name": "Minimal", "type": "plc-project"},
+                "data": {
+                    "configuration": {
+                        "resource": {
+                            "tasks": [
+                                {
+                                    "name": "MainTask",
+                                    "triggering": "Cyclic",
+                                    "interval": "T#20ms",
+                                    "priority": 0,
+                                }
+                            ],
+                            "instances": [
+                                {
+                                    "name": "MainInstance",
+                                    "task": "MainTask",
+                                    "program": "main",
+                                }
+                            ],
+                        }
+                    }
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    result = await client.call_tool(
+        "get_execution_configuration", {"project_path": str(project)}
+    )
+
+    assert not result.is_error
+    assert result.structured_content == {
+        "tasks": [
+            {
+                "name": "MainTask",
+                "triggering": "Cyclic",
+                "interval": "T#20ms",
+                "priority": 0,
+            }
+        ],
+        "program_instances": [
+            {"name": "MainInstance", "task": "MainTask", "program": "main"}
+        ],
+    }
+
+
+@pytest.mark.anyio
+async def test_execution_configuration_errors_are_exposed_through_mcp(
+    client: Client, tmp_path: Path
+) -> None:
+    project = tmp_path / "project"
+    project.mkdir()
+    (project / "project.json").write_text(
+        json.dumps(
+            {
+                "meta": {"name": "Minimal", "type": "plc-project"},
+                "data": {"configuration": {"resource": {"tasks": {}}}},
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    result = await client.call_tool(
+        "get_execution_configuration", {"project_path": str(project)}
+    )
+
+    assert result.is_error
+    assert "execution tasks must be an array" in tool_text(result)
 
 
 @pytest.mark.anyio

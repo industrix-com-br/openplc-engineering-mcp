@@ -1,6 +1,6 @@
 # MCP tools
 
-The current server registers exactly seven domain-oriented tools. All tools use `open_world_hint: false`. Inspection and diagnostics tools are read-only; `compile_project` is registered with `read_only_hint: false` because the OpenPLC CLI may write local build artifacts.
+The current server registers exactly eight domain-oriented tools. All tools use `open_world_hint: false`. Inspection and diagnostics tools are read-only; `compile_project` is registered with `read_only_hint: false` because the OpenPLC CLI may write local build artifacts.
 
 The public registrations live in `src/openplc_engineering_mcp/server.py`. OpenPLC behavior is grouped by responsibility under `src/openplc_engineering_mcp/openplc/`.
 
@@ -8,6 +8,7 @@ The public registrations live in `src/openplc_engineering_mcp/server.py`. OpenPL
 | --- | --- | --- |
 | `get_project_structure` | yes | Inspect recognized files in an OpenPLC project |
 | `list_pous` | yes | Discover Programs, Function Blocks, and Functions |
+| `get_execution_configuration` | yes | Inspect configured Tasks and Program Instances |
 | `read_pou` | yes | Read a POU by domain name without requiring its filesystem path |
 | `list_variables` | yes | Inspect variables declared by a POU |
 | `validate_project` | yes | Check the MCP's shallow project preconditions |
@@ -43,6 +44,53 @@ Returns the recognized Programs, Function Blocks, and Functions. Each item conta
 - project-relative `path`.
 
 See [`openplc-projects.md`](openplc-projects.md) for language mapping and deduplication behavior.
+
+## `get_execution_configuration`
+
+Input:
+
+- `project_path: str`.
+
+Returns the configured execution model of the project:
+
+```json
+{
+  "tasks": [
+    {
+      "name": "MainTask",
+      "triggering": "Cyclic",
+      "interval": "T#20ms",
+      "priority": 0
+    }
+  ],
+  "program_instances": [
+    {
+      "name": "MainInstance",
+      "task": "MainTask",
+      "program": "main"
+    }
+  ]
+}
+```
+
+Each Task contains its name, triggering mode, priority, and execution interval. For a `Cyclic` Task, `interval` preserves the stored IEC `TIME` string exactly. For an `Interrupt` Task, the MCP returns `interval: null` rather than presenting the stored interval field as cyclic timing.
+
+Each Program Instance contains its name, the Task reference, and the Program reference exactly as stored by OpenPLC. The MCP does not independently validate those references or evaluate IEC time literals.
+
+A project with no execution configuration returns:
+
+```json
+{
+  "tasks": [],
+  "program_instances": []
+}
+```
+
+Malformed Task or Program Instance structures that cannot be represented reliably are MCP tool errors. Global variables and other neighboring `project.json` data are intentionally outside this tool.
+
+This tool reports the **configured execution model of the project**. It does not report which code is currently executing in a live OpenPLC Runtime; live execution state belongs to future runtime/debug tools.
+
+See [`openplc-projects.md`](openplc-projects.md) for the project representation this inspection depends on.
 
 ## `read_pou`
 

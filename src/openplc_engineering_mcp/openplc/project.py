@@ -27,15 +27,10 @@ _PROJECT_TYPES = {"plc-project", "plc-library", "PLC"}
 _SOURCE_SUFFIXES = {".st", ".il", ".ld", ".fbd", ".py", ".cpp", ".json"}
 
 
-def load_project(project_path: str) -> tuple[Path, str, ProjectType]:
-    """Load the basic metadata required from an OpenPLC Editor project.
-
-    Returns:
-        The resolved project root, project name, and project type.
-
-    Raises:
-        ToolError: If the project path or project.json is invalid.
-    """
+def _load_project_document(
+    project_path: str,
+) -> tuple[Path, str, ProjectType, dict[str, object]]:
+    """Load an OpenPLC project while retaining its parsed project.json document."""
     if not project_path.strip():
         raise ToolError("project_path must not be empty")
 
@@ -73,7 +68,20 @@ def load_project(project_path: str) -> tuple[Path, str, ProjectType]:
     if project_type not in _PROJECT_TYPES:
         raise ToolError("OpenPLC project not recognized: unsupported project.json meta.type")
 
-    return root, name, cast(ProjectType, project_type)
+    return root, name, cast(ProjectType, project_type), cast(dict[str, object], project)
+
+
+def load_project(project_path: str) -> tuple[Path, str, ProjectType]:
+    """Load the basic metadata required from an OpenPLC Editor project.
+
+    Returns:
+        The resolved project root, project name, and project type.
+
+    Raises:
+        ToolError: If the project path or project.json is invalid.
+    """
+    root, name, project_type, _ = _load_project_document(project_path)
+    return root, name, project_type
 
 
 def validate_project(project_path: str) -> ProjectValidation:
