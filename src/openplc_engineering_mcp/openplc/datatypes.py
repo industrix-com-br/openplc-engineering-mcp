@@ -5,7 +5,7 @@ from typing import Literal, TypedDict
 
 from mcp.server.mcpserver.exceptions import ToolError
 
-from openplc_engineering_mcp.openplc.project import load_project_document, list_source_files
+from openplc_engineering_mcp.openplc.project import list_source_files, load_project_document
 
 
 class StructureField(TypedDict):
