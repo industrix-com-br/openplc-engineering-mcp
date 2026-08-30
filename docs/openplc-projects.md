@@ -53,6 +53,52 @@ Only `.dt` files are included from `datatypes/`.
 
 Returned file paths are project-relative, use POSIX separators, are deduplicated, and are sorted.
 
+## Project-defined data types
+
+`list_datatypes()` in `openplc/datatypes.py` follows the current OpenPLC Editor migration behavior.
+
+The canonical persistence format is:
+
+```text
+datatypes/<Name>.dt
+```
+
+Each `.dt` file contains one IEC `TYPE ... END_TYPE` block with exactly one supported data-type declaration. If one or more `.dt` files exist anywhere under `datatypes/`, those files are the complete source of truth for this inspection. The MCP does not merge them with the legacy project document.
+
+When no `.dt` files exist, the MCP falls back to:
+
+```text
+project.json
+└── data
+    └── dataTypes
+```
+
+The supported derivations are the three currently persisted by OpenPLC:
+
+- `enumerated` — enumeration values and optional initial value;
+- `structure` — named fields with declared type, optional initial value, and optional inline documentation;
+- `array` — base type, independent dimensions, and optional initial value.
+
+The `.dt` parser intentionally accepts only the text forms emitted by the current OpenPLC data-type serializer. It recognizes single-line enumerations and arrays plus line-oriented structures. Declared types and initial values are preserved as strings rather than converted into OpenPLC's internal `PLCVariableType` representation or evaluated as IEC literals.
+
+For example, a structure field may report:
+
+```text
+ARRAY [0..9] OF REAL
+```
+
+and a multidimensional array reports its bounds independently:
+
+```json
+["0..9", "0..4"]
+```
+
+The file name defines data-type identity. `datatypes/MotorStatus.dt` must declare `MotorStatus`; comparison is case-insensitive, matching the OpenPLC Editor behavior. A mismatch is a tool error.
+
+The inspection is fail-closed: if any authoritative `.dt` file is unreadable, malformed, contains more than one declaration, uses an unsupported shape, or has a filename mismatch, `list_datatypes()` raises a tool error rather than returning a partial data-type list. Structurally malformed legacy `data.dataTypes` data is handled the same way. A valid project with neither representation returns an empty list.
+
+This behavior does not list built-in IEC types or library-provided types, resolve references between types, validate referenced type names semantically, or implement a complete IEC 61131-3 grammar.
+
 ## Execution configuration
 
 The current OpenPLC Editor stores the project execution configuration under:

@@ -17,6 +17,8 @@ OpenPLC Engineering MCP
         |
         +-- variables.py --- POU and resource global variable declarations
         |
+        +-- datatypes.py --- project-defined data types
+        |
         +-- compiler.py ---- openplc-cli
 ```
 
@@ -37,7 +39,7 @@ The server provides a small domain-oriented interface between an MCP-compatible 
 Responsible for:
 
 - creating the `MCPServer`;
-- registering the nine public MCP tools;
+- registering the ten public MCP tools;
 - applying tool annotations;
 - exposing the package entry point;
 - starting the stdio server.
@@ -55,7 +57,7 @@ Responsible for project-level behavior shared by the other OpenPLC modules:
 - enforcing the minimum project preconditions;
 - providing shallow project validation;
 - listing relevant project files;
-- providing the shared recognized-source-file scan used by POU discovery.
+- providing the shared recognized-source-file scan used by POU and data-type discovery.
 
 ### `openplc/execution.py`
 
@@ -88,6 +90,19 @@ Responsible for POU variable inspection:
 - listing resource-level global variables from `configuration.resource.globalVariables`;
 - raising tool errors when declarations cannot be interpreted reliably.
 
+### `openplc/datatypes.py`
+
+Responsible for project-defined data-type inspection:
+
+- preferring canonical `datatypes/**/*.dt` files whenever any are present;
+- parsing only the enumerated, structure, and array forms persisted by the current OpenPLC Editor;
+- enforcing the `.dt` filename as the data type identity;
+- normalizing legacy `project.json.data.dataTypes` only when no `.dt` files exist;
+- returning domain-readable declared types without exposing OpenPLC's internal variable-type objects;
+- raising tool errors instead of returning partial results for malformed definitions.
+
+It is deliberately not a generic IEC parser or a data-type service layer.
+
 ### `openplc/compiler.py`
 
 Responsible for compiler behavior:
@@ -108,15 +123,17 @@ server.py
    ├── openplc.execution
    ├── openplc.pous
    ├── openplc.variables
+   ├── openplc.datatypes
    └── openplc.compiler
 
 openplc.execution ─► openplc.project
 openplc.pous ──────► openplc.project
 openplc.variables ─► openplc.pous, openplc.project
+openplc.datatypes ─► openplc.project
 openplc.compiler ──► openplc.project
 ```
 
-`project.py` does not depend on the execution, POU, variable, or compiler modules. It is the shared lower-level dependency for local project loading, configuration-resource lookup, and recognized source-file discovery.
+`project.py` does not depend on the execution, POU, variable, data-type, or compiler modules. It is the shared lower-level dependency for local project loading, configuration-resource lookup, and recognized source-file discovery.
 
 There are no service, repository, adapter, client, or one-file-per-tool layers.
 

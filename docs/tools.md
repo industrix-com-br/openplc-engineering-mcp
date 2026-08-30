@@ -1,6 +1,6 @@
 # MCP tools
 
-The current server registers exactly nine domain-oriented tools. All tools use `open_world_hint: false`. Inspection and diagnostics tools are read-only; `compile_project` is registered with `read_only_hint: false` because the OpenPLC CLI may write local build artifacts.
+The current server registers exactly ten domain-oriented tools. All tools use `open_world_hint: false`. Inspection and diagnostics tools are read-only; `compile_project` is registered with `read_only_hint: false` because the OpenPLC CLI may write local build artifacts.
 
 The public registrations live in `src/openplc_engineering_mcp/server.py`. OpenPLC behavior is grouped by responsibility under `src/openplc_engineering_mcp/openplc/`.
 
@@ -8,6 +8,7 @@ The public registrations live in `src/openplc_engineering_mcp/server.py`. OpenPL
 | --- | --- | --- |
 | `get_project_structure` | yes | Inspect recognized files in an OpenPLC project |
 | `list_pous` | yes | Discover Programs, Function Blocks, and Functions |
+| `list_datatypes` | yes | Inspect project-defined enumerated, structure, and array data types |
 | `get_execution_configuration` | yes | Inspect configured Tasks and Program Instances |
 | `read_pou` | yes | Read a POU by domain name without requiring its filesystem path |
 | `list_variables` | yes | Inspect variables declared by a POU |
@@ -45,6 +46,72 @@ Returns the recognized Programs, Function Blocks, and Functions. Each item conta
 - project-relative `path`.
 
 See [`openplc-projects.md`](openplc-projects.md) for language mapping and deduplication behavior.
+
+## `list_datatypes`
+
+Input:
+
+- `project_path: str`.
+
+Returns only the **project-defined data types** known to the OpenPLC project, sorted by name. The current OpenPLC persistence format is authoritative when one or more files exist under `datatypes/**/*.dt`; legacy `project.json.data.dataTypes` is used only when no `.dt` files exist.
+
+The first version exposes the three data-type derivations currently represented by OpenPLC.
+
+Enumeration:
+
+```json
+{
+  "name": "OperatingMode",
+  "kind": "enumerated",
+  "values": ["Auto", "Manual", "Maintenance"],
+  "initial_value": "Auto"
+}
+```
+
+Structure:
+
+```json
+{
+  "name": "MotorStatus",
+  "kind": "structure",
+  "fields": [
+    {
+      "name": "speed",
+      "type": "REAL",
+      "initial_value": "0.0",
+      "documentation": "Current motor speed"
+    }
+  ]
+}
+```
+
+Array:
+
+```json
+{
+  "name": "TemperatureBuffer",
+  "kind": "array",
+  "base_type": "REAL",
+  "dimensions": ["0..99"],
+  "initial_value": null
+}
+```
+
+Declared field types and initial values remain strings. Inline array fields therefore remain domain-readable declarations such as `ARRAY [0..9] OF REAL`; IEC literals are not evaluated. Multidimensional array bounds are returned independently.
+
+Each `.dt` file must contain exactly one supported `TYPE ... END_TYPE` declaration, and its declared type name must match the file name case-insensitively. Malformed or unsupported definitions raise a tool error; the MCP does not silently skip a bad type and return a partial project view. A valid project with no project-defined data types returns an empty list.
+
+The first version intentionally does not provide:
+
+- built-in IEC type listing;
+- OpenPLC library data-type discovery;
+- data-type creation, modification, or deletion;
+- `read_datatype()` or `get_datatype()`;
+- reference search, dependency graphs, or recursive type resolution;
+- semantic validation of references between types;
+- a complete IEC 61131-3 grammar or AST.
+
+See [`openplc-projects.md`](openplc-projects.md) for the persistence and migration behavior.
 
 ## `get_execution_configuration`
 
