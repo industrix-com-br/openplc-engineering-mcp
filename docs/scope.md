@@ -2,10 +2,11 @@
 
 ## Current implementation
 
-The project is an early experimental MCP server for local OpenPLC engineering operations. It currently exposes nine tools:
+The project is an early experimental MCP server for local OpenPLC engineering operations. It currently exposes ten tools:
 
 - `get_project_structure` — inspect recognized project files;
 - `list_pous` — discover Programs, Function Blocks, and Functions;
+- `list_datatypes` — inspect project-defined enumerated, structure, and array data types;
 - `get_execution_configuration` — inspect configured Tasks and Program Instances;
 - `read_pou` — read a POU's preferred representation by domain name;
 - `list_variables` — inspect variables declared by a POU;
@@ -14,7 +15,7 @@ The project is an early experimental MCP server for local OpenPLC engineering op
 - `compile_project` — compile through `openplc-cli`;
 - `get_diagnostics` — return `stderr` diagnostics captured from the latest compilation in the current server process.
 
-Project, execution-configuration, POU, variable, and diagnostic inspection is read-only. Compilation is the only local write-capable operation and is delegated to the authoritative `openplc-cli`.
+Project, execution-configuration, data-type, POU, variable, and diagnostic inspection is read-only. Compilation is the only local write-capable operation and is delegated to the authoritative `openplc-cli`.
 
 ## Current boundary
 
@@ -24,6 +25,7 @@ The implementation currently covers:
 - basic `project.json` metadata preconditions;
 - recognized project-file inspection;
 - configured execution Tasks and Program Instances;
+- project-defined data-type inspection from current `.dt` files or legacy `project.json` data;
 - POU discovery;
 - POU content reading;
 - POU variable/interface discovery;
@@ -37,6 +39,8 @@ The implementation currently covers:
 The current server does not provide:
 
 - project or POU modification;
+- data-type creation, modification, deletion, or recursive resolution;
+- built-in IEC or OpenPLC library data-type discovery;
 - variable creation or modification;
 - project-wide variable or reference search;
 - deployment or upload;
@@ -58,6 +62,7 @@ The MCP should not become:
 - a generic filesystem API;
 - a generic shell execution API;
 - a duplicate implementation of the OpenPLC project schema;
+- a complete IEC 61131-3 parser;
 - a replacement for the OpenPLC Editor, CLI, compiler, or runtime;
 - a framework of abstractions created only for possible future features.
 
