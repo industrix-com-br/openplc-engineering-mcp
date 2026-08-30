@@ -44,9 +44,13 @@ Read the [published documentation](https://industrix-com-br.github.io/openplc-en
 
 The source documentation remains in [`docs/`](docs/) and [`docs/index.md`](docs/index.md) is the entry point for agents working directly with the repository.
 
-## Scope
+## Compatibility
 
-This MCP supports only the **current OpenPLC Editor project format**. Legacy OpenPLC project formats, historical project representations, automatic migration, and backward-compatibility parsing are intentionally unsupported.
+- **Project format:** targets the native text-based OpenPLC Editor project format introduced in v4.1.0.
+- **Legacy:** JSON-centric projects from before this format are intentionally unsupported.
+- **Development dependency:** some MCP capabilities currently depend on unreleased OpenPLC Editor functionality, notably `openplc-cli` and `.dt` data-type persistence.
+
+## Scope
 
 The current version focuses on project, execution-configuration, POU, data-type, and variable inspection and shallow project validation, plus compilation delegated to `openplc-cli`. Project modification, data-type modification, variable modification, deployment, runtime control, variable forcing, authentication, HTTP transport, and generic shell/filesystem tools are not implemented.
 
