@@ -37,7 +37,7 @@ Keep domain implementation behavior close to the implementation modules:
 - `tests/test_project.py` for project loading, validation, and structure inspection;
 - `tests/test_execution.py` for Task and Program Instance inspection;
 - `tests/test_io.py` for physical I/O configuration inspection;
-- `tests/test_pous.py` for POU discovery and reading behavior;
+- `tests/test_pous.py` for POU discovery, reading, and update behavior;
 - `tests/test_variables.py` for POU and resource-level global variable inspection;
 - `tests/test_datatypes.py` for project-defined data-type inspection;
 - `tests/test_compiler.py` for CLI compilation and diagnostics.

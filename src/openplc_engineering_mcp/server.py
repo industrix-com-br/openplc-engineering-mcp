@@ -14,9 +14,10 @@ from openplc_engineering_mcp.openplc.execution import (
 )
 from openplc_engineering_mcp.openplc.io import IOConfiguration
 from openplc_engineering_mcp.openplc.io import get_io_configuration as inspect_io_configuration
-from openplc_engineering_mcp.openplc.pous import PouContent, PouInfo
+from openplc_engineering_mcp.openplc.pous import PouContent, PouInfo, UpdatePouResult
 from openplc_engineering_mcp.openplc.pous import list_pous as inspect_pous
 from openplc_engineering_mcp.openplc.pous import read_pou as inspect_pou
+from openplc_engineering_mcp.openplc.pous import update_pou as update_pou_source
 from openplc_engineering_mcp.openplc.project import ProjectStructure, ProjectValidation
 from openplc_engineering_mcp.openplc.project import get_project_structure as inspect_project_structure
 from openplc_engineering_mcp.openplc.project import validate_project as inspect_project
@@ -63,6 +64,23 @@ def get_io_configuration(project_path: str) -> IOConfiguration:
 def read_pou(project_path: str, pou_name: str) -> PouContent:
     """Read a POU from an OpenPLC project by name."""
     return inspect_pou(project_path, pou_name)
+
+
+@mcp.tool(annotations=_LOCAL_WRITE)
+def update_pou(
+    project_path: str, pou_name: str, content: str, expected_content_hash: str
+) -> UpdatePouResult:
+    """Replace the complete content of an existing Structured Text POU.
+
+    The POU is selected by domain name; the caller never supplies a filesystem
+    path. The POU name, type, language, and canonical path are immutable through
+    this operation, and the replacement must declare the same POU identity.
+    expected_content_hash must be the content_hash returned by read_pou() for the
+    version the replacement is based on; a stale hash rejects the update.
+    Structured Text is the only writable language. Compilation is not triggered
+    automatically; call compile_project() explicitly afterwards.
+    """
+    return update_pou_source(project_path, pou_name, content, expected_content_hash)
 
 
 @mcp.tool(annotations=_READ_ONLY)

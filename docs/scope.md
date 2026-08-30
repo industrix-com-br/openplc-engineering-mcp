@@ -2,7 +2,7 @@
 
 ## Current implementation
 
-The project is an early experimental MCP server for local OpenPLC engineering operations. It currently exposes eleven tools:
+The project is an early experimental MCP server for local OpenPLC engineering operations. It currently exposes twelve tools:
 
 - `get_project_structure` — inspect recognized project files;
 - `list_pous` — discover Programs, Function Blocks, and Functions;
@@ -10,13 +10,14 @@ The project is an early experimental MCP server for local OpenPLC engineering op
 - `get_execution_configuration` — inspect configured Tasks and Program Instances;
 - `get_io_configuration` — inspect the selected device board and its active local physical I/O mapping;
 - `read_pou` — read a POU by domain name;
+- `update_pou` — replace the complete content of an existing Structured Text POU;
 - `list_variables` — inspect variables declared by a POU;
 - `list_global_variables` — inspect the project's resource-level global variables;
 - `validate_project` — check shallow local project preconditions;
 - `compile_project` — compile through `openplc-cli`;
 - `get_diagnostics` — return `stderr` diagnostics captured from the latest compilation in the current server process.
 
-Project, execution-configuration, physical-I/O, data-type, POU, variable, and diagnostic inspection is read-only. Compilation is the only local write-capable operation and is delegated to the authoritative `openplc-cli`.
+Project, execution-configuration, physical-I/O, data-type, POU, variable, and diagnostic inspection is read-only. The only local write-capable operations are `update_pou`, which atomically replaces one existing Structured Text POU file, and compilation, which is delegated to the authoritative `openplc-cli`.
 
 ## Project format
 
@@ -66,6 +67,7 @@ The implementation currently covers:
 - project-defined data-type inspection from `datatypes/*.dt` files;
 - POU discovery;
 - POU content reading;
+- Structured Text POU content replacement;
 - POU variable/interface discovery;
 - resource-level global variable inspection;
 - CLI compilation;
@@ -76,7 +78,9 @@ The implementation currently covers:
 
 The current server does not provide:
 
-- project or POU modification;
+- POU creation, deletion, renaming, type conversion, or language conversion;
+- writes to POUs in languages other than Structured Text;
+- project, execution, device, data-type, or resource-level configuration modification;
 - data-type creation, modification, deletion, or recursive resolution;
 - built-in IEC or OpenPLC library data-type discovery;
 - variable creation or modification;

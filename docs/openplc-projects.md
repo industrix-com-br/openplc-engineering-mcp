@@ -215,11 +215,32 @@ Historical JSON-only POUs are not discovered. POU names are deduplicated globall
 
 `read_pou()` in `openplc/pous.py` reads a current-format POU source file by its domain name. The caller does not provide or need to know the underlying filesystem path.
 
-The returned object contains the POU `name`, `type`, `language`, project-relative `path`, and source `content` read as UTF-8. Content is returned unchanged; this operation does not parse, normalize, summarize, or modify it.
+The returned object contains the POU `name`, `type`, `language`, project-relative `path`, source `content` read as UTF-8, and an exact-byte `content_hash` (`sha256:<64 lowercase hex>`). Content is returned unchanged and the hash is computed over the exact persisted bytes before any newline normalization, so the two fields always describe the same version. This operation does not parse, normalize, summarize, or modify the content.
 
 Discovery and reading share the same containment rule: a source file whose resolved target falls outside the project root is excluded from `list_pous()` and cannot be read by `read_pou()`. Listing and reading are therefore symmetric — a symlink cannot expose an external file through either operation.
 
 An empty POU name, an unknown POU name, or an unreadable selected source is raised as a tool error.
+
+## POU update
+
+`update_pou()` in `openplc/pous.py` replaces the complete persisted representation of one existing Structured Text POU. The current OpenPLC Editor persists each Program, Function Block, or Function as an individual language-specific file under `pous/`, and saving a POU writes that single file; `project.json` persists `pous: []` and does not duplicate POU source. Replacing the single authoritative file is therefore sufficient when the POU identity is unchanged.
+
+The operation is constrained to keep that replacement safe:
+
+- the POU already exists and is resolved by domain name, never by a caller-supplied path;
+- exactly one recognized current-format source file matches the requested stem;
+- the target language is Structured Text;
+- the target is an existing regular file inside the project root and is not itself a symlink;
+- the replacement declares the same POU type and exactly the same name, declares a Function return type where applicable, and contains the matching terminal keyword;
+- the caller supplies the exact-byte SHA-256 hash of the version the edit is based on, and a stale version rejects the write.
+
+The MCP validates this operation boundary only. It does not parse or re-serialize the POU body, does not reproduce OpenPLC's parser/recovery semantics, and does not validate IEC syntax, expressions, types, or references — those remain the OpenPLC compiler's responsibility through `compile_project()` and `get_diagnostics()`.
+
+Persistence uses a same-directory temporary file plus `os.replace()` so the original POU is never truncated and a failed update leaves the original bytes unchanged. No backup or history files are written.
+
+Because the target is resolved from its current-format filesystem identity and the expected hash only proves which exact bytes the caller read, a malformed existing ST POU can be repaired by replacing it with a valid same-name/same-type representation.
+
+OpenPLC Editor interaction limitation: the Editor watches POU files but only reloads a POU it considers saved/clean, and an Editor session holding unsaved state can later overwrite an MCP write. `update_pou()` is therefore not a synchronized co-editing workflow; the project should not be actively edited in the OpenPLC Editor at the same time.
 
 ## POU variable declarations
 
