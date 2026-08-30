@@ -1,5 +1,7 @@
 # Agent instructions
 
+This repository implements an MCP server for the [OpenPLC Editor](https://github.com/Autonomy-Logic/openplc-editor) project. Treat upstream OpenPLC behavior as authoritative when validating project semantics or CLI behavior.
+
 1. Read [`docs/index.md`](docs/index.md) first.
 2. Do not preload every document or source file.
 3. Use the task routing table in `docs/index.md` to load only the relevant context.
