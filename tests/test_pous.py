@@ -318,6 +318,37 @@ def test_update_crlf_content_round_trips_without_normalization(tmp_path: Path) -
     assert result["content_hash"] == sha256_token(replacement.encode("utf-8"))
 
 
+def test_update_bom_prefixed_pou_round_trips_without_stripping(tmp_path: Path) -> None:
+    project = make_update_project(tmp_path / "project")
+    bom_original = "\ufeff" + MAIN_PROGRAM
+    target = project / "pous" / "programs" / "MAIN.st"
+    target.write_bytes(bom_original.encode("utf-8"))
+    pou = read_pou(str(project), "MAIN")
+
+    assert pou["content"] == bom_original
+    assert pou["content_hash"] == sha256_token(bom_original.encode("utf-8"))
+
+    result = update_pou(str(project), "MAIN", pou["content"], pou["content_hash"])
+
+    assert result == {"name": "MAIN", "content_hash": pou["content_hash"]}
+    assert target.read_bytes() == bom_original.encode("utf-8")
+
+    bom_replacement = "\ufeffPROGRAM MAIN\n    counter := 0;\nEND_PROGRAM\n"
+    result = update_pou(str(project), "MAIN", bom_replacement, result["content_hash"])
+
+    assert target.read_bytes() == bom_replacement.encode("utf-8")
+    assert result["content_hash"] == sha256_token(bom_replacement.encode("utf-8"))
+
+
+def test_update_bom_prefixed_pou_with_documentation(tmp_path: Path) -> None:
+    project = make_update_project(tmp_path / "project")
+    replacement = "\ufeff(* Pump station control loop. *)\nPROGRAM MAIN\nEND_PROGRAM\n"
+
+    update_pou(str(project), "MAIN", replacement, current_hash(project, "MAIN"))
+
+    assert (project / "pous" / "programs" / "MAIN.st").read_bytes() == replacement.encode("utf-8")
+
+
 def test_update_only_touches_the_target_file(tmp_path: Path) -> None:
     project = make_update_project(tmp_path / "project")
     snapshot = {
@@ -720,20 +751,22 @@ def test_update_rejects_target_replaced_by_directory_before_final_check(
     assert tree_entries(project / "pous" / "programs") == ["MAIN.st"]
 
 
-def test_update_temp_creation_failure_leaves_target_unchanged(tmp_path: Path) -> None:
+def test_update_temp_creation_failure_leaves_target_unchanged(tmp_path: Path, monkeypatch) -> None:
     project = make_update_project(tmp_path / "project")
     target = project / "pous" / "programs" / "MAIN.st"
     original = target.read_bytes()
     pou = read_pou(str(project), "MAIN")
 
-    os.chmod(target.parent, 0o555)
-    try:
-        with pytest.raises(ToolError, match='Could not update POU "MAIN"'):
-            update_pou(str(project), "MAIN", "PROGRAM MAIN\nEND_PROGRAM\n", pou["content_hash"])
-    finally:
-        os.chmod(target.parent, 0o755)
+    def failing_mkstemp(*args, **kwargs):
+        raise PermissionError("simulated temp creation failure")
+
+    monkeypatch.setattr("openplc_engineering_mcp.openplc.pous.tempfile.mkstemp", failing_mkstemp)
+
+    with pytest.raises(ToolError, match='Could not update POU "MAIN"'):
+        update_pou(str(project), "MAIN", "PROGRAM MAIN\nEND_PROGRAM\n", pou["content_hash"])
 
     assert target.read_bytes() == original
+    assert tree_entries(project / "pous" / "programs") == ["MAIN.st"]
 
 
 def test_update_temp_write_failure_leaves_target_unchanged(tmp_path: Path, monkeypatch) -> None:

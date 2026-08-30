@@ -57,7 +57,7 @@ _POU_TERMINAL_KEYWORDS: dict[PouType, str] = {
     "function": "END_FUNCTION",
 }
 _CONTENT_HASH_RE = re.compile(r"^sha256:[0-9a-f]{64}$")
-_DOCUMENTATION_RE = re.compile(r"^\s*\(\*\s*(.*?)\s*\*\)\s*\n", re.DOTALL)
+_DOCUMENTATION_RE = re.compile(r"^[\s\ufeff]*\(\*\s*(.*?)\s*\*\)\s*\n", re.DOTALL)
 
 
 def _content_hash(raw: bytes) -> str:
@@ -155,7 +155,7 @@ def _validate_st_envelope(content: str, pou_type: PouType, pou_name: str) -> Non
     declaration_keyword = _POU_DECLARATION_KEYWORDS[pou_type]
     remaining = _DOCUMENTATION_RE.sub("", content, count=1)
     declaration = re.match(
-        rf"^\s*({declaration_keyword})\s+(\w+)(?:\s*:\s*(\w+))?", remaining, re.IGNORECASE
+        rf"^[\s\ufeff]*({declaration_keyword})\s+(\w+)(?:\s*:\s*(\w+))?", remaining, re.IGNORECASE
     )
     if declaration is None:
         raise ToolError(f'Replacement POU type does not match target type "{pou_type}"')

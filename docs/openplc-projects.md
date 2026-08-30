@@ -234,6 +234,8 @@ The operation is constrained to keep that replacement safe:
 - the replacement declares the same POU type and exactly the same name, declares a Function return type where applicable, and contains the matching terminal keyword;
 - the caller supplies the exact-byte SHA-256 hash of the version the edit is based on, and a stale version rejects the write.
 
+The envelope checks treat a leading UTF-8 BOM as whitespace before the declaration, mirroring the upstream parser, so BOM-prefixed POUs round-trip through `read_pou()` and `update_pou()` without byte normalization.
+
 The MCP validates this operation boundary only. It does not parse or re-serialize the POU body, does not reproduce OpenPLC's parser/recovery semantics, and does not validate IEC syntax, expressions, types, or references — those remain the OpenPLC compiler's responsibility through `compile_project()` and `get_diagnostics()`.
 
 Persistence uses a same-directory temporary file plus `os.replace()` so the original POU is never truncated and a failed update leaves the original bytes unchanged. No backup or history files are written.
