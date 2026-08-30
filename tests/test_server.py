@@ -35,12 +35,16 @@ async def test_server_and_tools_are_discoverable(client: Client) -> None:
         "get_diagnostics",
         "get_execution_configuration",
         "get_project_structure",
+        "list_datatypes",
         "list_global_variables",
         "list_pous",
         "list_variables",
         "read_pou",
         "validate_project",
     }
+    assert tools["list_datatypes"].annotations
+    assert tools["list_datatypes"].annotations.read_only_hint is True
+    assert tools["list_datatypes"].annotations.open_world_hint is False
     assert tools["list_global_variables"].annotations
     assert tools["list_global_variables"].annotations.read_only_hint is True
     assert tools["list_global_variables"].annotations.open_world_hint is False
@@ -157,6 +161,49 @@ async def test_execution_configuration_errors_are_exposed_through_mcp(
 
     assert result.is_error
     assert "execution tasks must be an array" in tool_text(result)
+
+
+@pytest.mark.anyio
+async def test_list_datatypes_returns_structured_content(client: Client, tmp_path: Path) -> None:
+    project = tmp_path / "project"
+    (project / "datatypes").mkdir(parents=True)
+    (project / "project.json").write_text(
+        json.dumps({"meta": {"name": "Minimal", "type": "plc-project"}}), encoding="utf-8"
+    )
+    (project / "datatypes" / "OperatingMode.dt").write_text(
+        "TYPE\nOperatingMode : (Auto, Manual) := Auto;\nEND_TYPE\n", encoding="utf-8"
+    )
+
+    result = await client.call_tool("list_datatypes", {"project_path": str(project)})
+
+    assert not result.is_error
+    assert result.structured_content == {
+        "result": [
+            {
+                "name": "OperatingMode",
+                "kind": "enumerated",
+                "values": ["Auto", "Manual"],
+                "initial_value": "Auto",
+            }
+        ]
+    }
+
+
+@pytest.mark.anyio
+async def test_list_datatype_errors_are_exposed_through_mcp(client: Client, tmp_path: Path) -> None:
+    project = tmp_path / "project"
+    (project / "datatypes").mkdir(parents=True)
+    (project / "project.json").write_text(
+        json.dumps({"meta": {"name": "Minimal", "type": "plc-project"}}), encoding="utf-8"
+    )
+    (project / "datatypes" / "Alpha.dt").write_text(
+        "TYPE\nBeta : (A, B);\nEND_TYPE\n", encoding="utf-8"
+    )
+
+    result = await client.call_tool("list_datatypes", {"project_path": str(project)})
+
+    assert result.is_error
+    assert "does not match filename identity" in tool_text(result)
 
 
 @pytest.mark.anyio
