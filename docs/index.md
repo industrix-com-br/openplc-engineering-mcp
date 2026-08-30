@@ -2,6 +2,8 @@
 
 This file is the entry point for project documentation.
 
+The MCP server targets the [OpenPLC Editor](https://github.com/Autonomy-Logic/openplc-editor) project and exposes a small domain-oriented interface over its engineering concepts.
+
 The documentation is organized for **progressive disclosure**: read this index first, then load only the files needed for the task at hand.
 
 ## Agent loading rule
