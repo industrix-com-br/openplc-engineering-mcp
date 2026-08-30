@@ -4,6 +4,23 @@ This document describes only the [current OpenPLC Editor](https://github.com/Aut
 
 The MCP intentionally does not support legacy OpenPLC project formats, historical project representations, migrations, or backward-compatibility parsing. See [`scope.md`](scope.md).
 
+## Compatibility baseline
+
+The complete current MCP feature set targets the OpenPLC Editor `development` branch after two upstream changes merged on August 24, 2026:
+
+- [OpenPLC Editor PR #999](https://github.com/Autonomy-Logic/openplc-editor/pull/999), which introduced the `datatypes/*.dt` persistence used by `list_datatypes()`;
+- [OpenPLC Editor PR #1026](https://github.com/Autonomy-Logic/openplc-editor/pull/1026), which introduced the headless CLI used by `compile_project()`.
+
+The latest published OpenPLC Editor release before those changes is v4.2.11, released on August 11, 2026. Consequently, no published release currently contains the complete upstream feature set expected by this MCP.
+
+The project-format breakline is earlier and narrower: [OpenPLC Editor PR #411](https://github.com/Autonomy-Logic/openplc-editor/pull/411) moved POU persistence from JSON-centric files to native text representations and was shipped in v4.1.0. Projects using that native POU layout match the POU representation expected by this MCP, but v4.1.0 by itself does not provide the later `.dt` persistence or headless CLI required by the complete MCP feature set.
+
+In short:
+
+- **POU-format breakline:** OpenPLC Editor v4.1.0;
+- **full MCP compatibility:** current OpenPLC Editor `development` branch after PR #999 and PR #1026;
+- **legacy JSON-centric projects:** intentionally unsupported.
+
 ## Minimum project preconditions
 
 The shared `load_project()` helper in `openplc/project.py` requires:
