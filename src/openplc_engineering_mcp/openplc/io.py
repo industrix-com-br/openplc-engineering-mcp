@@ -14,6 +14,8 @@ _DEFAULT_DEVICE_BOARD = "OpenPLC Simulator"
 
 
 class IOPoint(TypedDict):
+    """A single physical I/O point of the active device board."""
+
     pin: str
     pin_type: PinType
     address: str
@@ -21,6 +23,8 @@ class IOPoint(TypedDict):
 
 
 class IOConfiguration(TypedDict):
+    """The selected device board and its active local physical I/O mapping."""
+
     device_board: str
     io_points: list[IOPoint]
 

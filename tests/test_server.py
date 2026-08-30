@@ -169,6 +169,7 @@ async def test_execution_configuration_errors_are_exposed_through_mcp(
 
 @pytest.mark.anyio
 async def test_io_configuration_returns_structured_content(client: Client, tmp_path: Path) -> None:
+    """get_io_configuration returns the active board and its I/O points as structured content."""
     project = tmp_path / "project"
     devices = project / "devices"
     devices.mkdir(parents=True)
@@ -214,6 +215,7 @@ async def test_io_configuration_returns_structured_content(client: Client, tmp_p
 async def test_io_configuration_errors_are_exposed_through_mcp(
     client: Client, tmp_path: Path
 ) -> None:
+    """Unsupported pin-mapping formats surface as MCP tool errors from get_io_configuration."""
     project = tmp_path / "project"
     devices = project / "devices"
     devices.mkdir(parents=True)
