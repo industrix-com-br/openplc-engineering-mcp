@@ -1,6 +1,6 @@
 # OpenPLC projects
 
-This document describes only the OpenPLC project behavior that the MCP currently depends on. It is not a replacement for the OpenPLC project schema.
+This document describes only the [OpenPLC Editor](https://github.com/Autonomy-Logic/openplc-editor) project behavior that the MCP currently depends on. It is not a replacement for the OpenPLC project schema; upstream OpenPLC behavior remains authoritative.
 
 ## Minimum project preconditions
 
