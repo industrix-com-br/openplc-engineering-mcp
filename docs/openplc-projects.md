@@ -1,6 +1,8 @@
 # OpenPLC projects
 
-This document describes only the [OpenPLC Editor](https://github.com/Autonomy-Logic/openplc-editor) project behavior that the MCP currently depends on. It is not a replacement for the OpenPLC project schema; upstream OpenPLC behavior remains authoritative.
+This document describes only the [current OpenPLC Editor](https://github.com/Autonomy-Logic/openplc-editor) project behavior that the MCP depends on. It is not a replacement for the OpenPLC project schema; upstream OpenPLC behavior remains authoritative.
+
+The MCP intentionally does not support legacy OpenPLC project formats, historical project representations, migrations, or backward-compatibility parsing. See [`scope.md`](scope.md).
 
 ## Minimum project preconditions
 
@@ -11,13 +13,12 @@ The shared `load_project()` helper in `openplc/project.py` requires:
 - `project.json` at the project root;
 - valid JSON containing a `meta` object;
 - `meta.name` as a string;
-- a supported `meta.type`.
+- a current supported `meta.type`.
 
 Supported project types are:
 
 - `plc-project`;
-- `plc-library`;
-- `PLC`.
+- `plc-library`.
 
 The supplied path is expanded and resolved before it is returned or used by other operations.
 
@@ -37,7 +38,7 @@ devices/remote/**
 datatypes/**/*.dt
 ```
 
-For the POU, server, and remote directories, recognized file suffixes are:
+For POU directories, recognized current source suffixes are:
 
 ```text
 .st
@@ -46,32 +47,21 @@ For the POU, server, and remote directories, recognized file suffixes are:
 .fbd
 .py
 .cpp
-.json
 ```
 
-Only `.dt` files are included from `datatypes/`.
+Historical JSON POU files are not part of the recognized POU layout. Server and remote-device directories may still contain JSON because JSON remains part of their current representation; only `.dt` files are included from `datatypes/`.
 
 Returned file paths are project-relative, use POSIX separators, are deduplicated, and are sorted.
 
 ## Project-defined data types
 
-`list_datatypes()` in `openplc/datatypes.py` follows the current OpenPLC Editor migration behavior.
-
-The canonical persistence format is:
+`list_datatypes()` in `openplc/datatypes.py` reads the canonical current persistence format:
 
 ```text
 datatypes/<Name>.dt
 ```
 
-Each `.dt` file contains one IEC `TYPE ... END_TYPE` block with exactly one supported data-type declaration. If one or more `.dt` files exist anywhere under `datatypes/`, those files are the complete source of truth for this inspection. The MCP does not merge them with the legacy project document.
-
-When no `.dt` files exist, the MCP falls back to:
-
-```text
-project.json
-└── data
-    └── dataTypes
-```
+Each `.dt` file contains one IEC `TYPE ... END_TYPE` block with exactly one supported data-type declaration. Embedded historical `project.json.data.dataTypes` definitions are not parsed. If such definitions are present without canonical `.dt` files, the tool reports an unsupported project format rather than normalizing them.
 
 The supported derivations are the three currently persisted by OpenPLC:
 
@@ -79,7 +69,7 @@ The supported derivations are the three currently persisted by OpenPLC:
 - `structure` — named fields with declared type, optional initial value, and optional inline documentation;
 - `array` — base type, independent dimensions, and optional initial value.
 
-The `.dt` parser intentionally accepts only the text forms emitted by the current OpenPLC data-type serializer. It recognizes single-line enumerations and arrays plus line-oriented structures. Declared types and initial values are preserved as strings rather than converted into OpenPLC's internal `PLCVariableType` representation or evaluated as IEC literals.
+The `.dt` parser intentionally accepts only the text forms needed by the current OpenPLC data-type serializer. It recognizes single-line enumerations and arrays plus line-oriented structures. Declared types and initial values are preserved as strings rather than converted into OpenPLC's internal variable-type representation or evaluated as IEC literals.
 
 For example, a structure field may report:
 
@@ -93,15 +83,15 @@ and a multidimensional array reports its bounds independently:
 ["0..9", "0..4"]
 ```
 
-The file name defines data-type identity. `datatypes/MotorStatus.dt` must declare `MotorStatus`; comparison is case-insensitive, matching the OpenPLC Editor behavior. A mismatch is a tool error.
+The file name defines data-type identity. `datatypes/MotorStatus.dt` must declare `MotorStatus`; comparison is case-insensitive. A mismatch is a tool error.
 
-The inspection is fail-closed: if any authoritative `.dt` file is unreadable, malformed, contains more than one declaration, uses an unsupported shape, or has a filename mismatch, `list_datatypes()` raises a tool error rather than returning a partial data-type list. Structurally malformed legacy `data.dataTypes` data is handled the same way. A valid project with neither representation returns an empty list.
+The inspection is fail-closed: if an authoritative `.dt` file is unreadable, malformed, contains more than one declaration, uses an unsupported shape, or has a filename mismatch, `list_datatypes()` raises a tool error rather than returning a partial data-type list. A current-format project with no `.dt` files and no historical embedded definitions returns an empty list.
 
 This behavior does not list built-in IEC types or library-provided types, resolve references between types, validate referenced type names semantically, or implement a complete IEC 61131-3 grammar.
 
 ## Execution configuration
 
-The current OpenPLC Editor stores the project execution configuration under:
+The current OpenPLC Editor project representation used by the MCP stores execution configuration under:
 
 ```text
 data
@@ -112,7 +102,7 @@ data
         └── globalVariables
 ```
 
-Its project loader also accepts the legacy `data.configurations` field. The MCP follows the same compatibility rule: `data.configuration` is preferred when present, with `data.configurations` used as the legacy fallback.
+The historical `data.configurations` representation is intentionally unsupported. When it is encountered where the MCP needs the configuration resource, the tool reports an unsupported project format instead of falling back to it.
 
 A Task contains the execution fields used by this MCP:
 
@@ -137,7 +127,7 @@ For a cyclic Task, `get_execution_configuration()` preserves the original IEC `T
 
 A project with no execution configuration returns empty Task and Program Instance lists. If Task or Program Instance data is present but structurally malformed, the MCP raises a tool error rather than returning misleading data.
 
-`globalVariables` is physically adjacent to Tasks and Instances but is outside this inspection operation; it is exposed by `list_global_variables()`. See below. The MCP also does not parse `TIME` literals, apply new priority constraints, validate references, or infer live runtime execution state.
+`globalVariables` is physically adjacent to Tasks and Instances but is outside this inspection operation; it is exposed by `list_global_variables()`.
 
 ## Resource global variables
 
@@ -147,11 +137,9 @@ A project with no execution configuration returns empty Task and Program Instanc
 data.configuration.resource.globalVariables
 ```
 
-with the same legacy `data.configurations.resource` fallback used for execution configuration. This lookup is shared by the execution and global-variable inspections through `get_configuration_resource()` in `openplc/project.py`.
+Each current-format variable provides the data mapped into the public variable contract: `name`, structured declared `type`, `location`, `initialValue`, and `documentation`. The MCP takes the declared type from the current type object's `value` field. The containing resource defines the scope, so the MCP always reports `class: "global"` regardless of any stored class field.
 
-Each stored variable provides the data mapped into the public variable contract (`name`, declared `type`, `location`, `initialValue`, `documentation`). The containing resource defines the scope, so the MCP always reports `class: "global"` regardless of any stored class field, and reuses the same JSON type and empty-string normalization as legacy JSON POU variables.
-
-This operation is intentionally narrow. It does not scan POUs for `VAR_GLOBAL` declarations and it does not include named global variable lists (`globalVariableLists` / GVLs), which are separate domain concepts. Missing configuration or missing `globalVariables` yields an empty result; structurally malformed data is raised as a tool error.
+This operation intentionally does not scan POUs for `VAR_GLOBAL` declarations and does not include named global variable lists (`globalVariableLists` / GVLs), which are separate domain concepts. Missing configuration or missing `globalVariables` yields an empty result; structurally malformed current-format data is raised as a tool error.
 
 ## POU discovery
 
@@ -163,7 +151,7 @@ pous/function-blocks/
 pous/programs/
 ```
 
-The reported POU language is derived from the file suffix:
+The reported POU language is derived from the current source-file suffix:
 
 | Suffix | Reported language |
 | --- | --- |
@@ -173,19 +161,14 @@ The reported POU language is derived from the file suffix:
 | `.fbd` | `fbd` |
 | `.py` | `python` |
 | `.cpp` | `cpp` |
-| `.json` | `null` |
 
-POU names are deduplicated globally. When both a `.json` representation and a recognized source representation exist for the same name, the source representation is preferred. A JSON-only POU remains visible with `language: null`.
-
-Results are sorted by POU type, name, and path.
+Historical JSON-only POUs are not discovered. POU names are deduplicated globally and results are sorted by POU type, name, and path.
 
 ## POU reading
 
-`read_pou()` in `openplc/pous.py` reads a POU by its domain name. The caller does not provide or need to know the underlying filesystem path.
+`read_pou()` in `openplc/pous.py` reads a current-format POU source file by its domain name. The caller does not provide or need to know the underlying filesystem path.
 
-The function uses the same discovery result as `list_pous()`, so representation selection remains consistent: when both a recognized source file and a same-name `.json` file exist, the source file is read; a JSON-only POU is read directly and reports `language: null`.
-
-The returned object contains the POU `name`, `type`, `language`, project-relative `path`, and the source `content` read as UTF-8. Content is returned unchanged; the MCP does not parse, normalize, summarize, or otherwise interpret it in this operation.
+The returned object contains the POU `name`, `type`, `language`, project-relative `path`, and source `content` read as UTF-8. Content is returned unchanged; this operation does not parse, normalize, summarize, or modify it.
 
 Discovery and reading share the same containment rule: a source file whose resolved target falls outside the project root is excluded from `list_pous()` and cannot be read by `read_pou()`. Listing and reading are therefore symmetric — a symlink cannot expose an external file through either operation.
 
@@ -193,9 +176,9 @@ An empty POU name, an unknown POU name, or an unreadable selected source is rais
 
 ## POU variable declarations
 
-`list_variables()` in `openplc/variables.py` operates on the representation already selected by `read_pou()` rather than locating POU files independently.
+`list_variables()` in `openplc/variables.py` operates on the current source file selected by `read_pou()`.
 
-For recognized source representations, the current OpenPLC Editor represents POU variables in declaration blocks using these classes:
+The current OpenPLC source representation uses declaration blocks mapped by the MCP as follows:
 
 ```text
 VAR_INPUT     -> input
@@ -207,15 +190,13 @@ VAR_GLOBAL    -> global
 VAR            -> local
 ```
 
-The MCP extracts only the declaration information required by its public contract: name, class, declared type, optional location, optional initial value, and optional inline documentation. It preserves declaration order and keeps type and initial-value expressions as strings rather than recreating OpenPLC's internal structured type model or evaluating IEC literals.
+The MCP extracts only the declaration information required by its public contract: name, class, declared type, optional location, optional initial value, and optional inline documentation. It preserves declaration order and keeps type and initial-value expressions as strings rather than recreating OpenPLC's internal type model or evaluating IEC literals.
 
-The OpenPLC Editor currently allows located declarations in local and global blocks; interface, external, and temporary classes do not carry physical locations. The MCP rejects a located declaration in those classes rather than reporting a misleading variable representation.
+The OpenPLC Editor currently allows located declarations in local and global blocks; interface, external, and temporary classes do not carry physical locations. The MCP rejects a located declaration in those classes rather than reporting a misleading representation.
 
-Current OpenPLC project parsing also supports legacy JSON POU files whose interface variables are already structured. When `read_pou()` selects a JSON-only POU, `list_variables()` reads those structured variables and maps the OpenPLC type object's declared `value` to the MCP's type string.
+A source POU with no variable blocks returns no variables. If a declaration block cannot be interpreted reliably, the MCP raises a tool error instead of treating the POU as having an empty interface.
 
-A source POU with no variable blocks returns no variables. If a declaration block exists but cannot be interpreted reliably, the MCP raises a tool error instead of treating the POU as having an empty interface. This keeps malformed declaration text distinct from a valid POU with no declarations.
-
-This behavior is intentionally narrow. The MCP does not reproduce the complete IEC 61131-3 grammar or the complete OpenPLC project model.
+Historical JSON POU variable representations are intentionally not parsed.
 
 ## Validation semantics
 
