@@ -73,7 +73,7 @@ The implementation is intentionally small and organized by domain responsibility
 | `src/openplc_engineering_mcp/server.py` | MCP server creation, ten tool registrations, annotations, and stdio entry point |
 | `src/openplc_engineering_mcp/openplc/project.py` | Project loading preconditions, shallow validation, parsed-document loading, configuration-resource and structure inspection, and shared source-file scanning |
 | `src/openplc_engineering_mcp/openplc/execution.py` | Task and Program Instance inspection from OpenPLC execution configuration |
-| `src/openplc_engineering_mcp/openplc/pous.py` | POU discovery and reading, language mapping, representation preference, and deduplication |
+| `src/openplc_engineering_mcp/openplc/pous.py` | POU discovery and reading, language mapping, containment checks, and name deduplication |
 | `src/openplc_engineering_mcp/openplc/variables.py` | POU variable extraction from current source declarations and resource-level global variable inspection |
 | `src/openplc_engineering_mcp/openplc/datatypes.py` | Project-defined data-type discovery and normalization from current `datatypes/**/*.dt` files |
 | `src/openplc_engineering_mcp/openplc/compiler.py` | `openplc-cli` compilation, JSON output parsing, and process-local diagnostics |
