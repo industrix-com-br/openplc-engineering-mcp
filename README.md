@@ -47,7 +47,7 @@ The source documentation remains in [`docs/`](docs/) and [`docs/index.md`](docs/
 ## Compatibility
 
 - **Project format:** targets the native text-based OpenPLC Editor project format introduced in v4.1.0.
-- **Legacy:** JSON-centric projects from before this format are intentionally unsupported.
+- **Backward compatibility:** intentionally not provided. Legacy JSON-centric OpenPLC projects are out of scope.
 - **Development dependency:** some MCP capabilities currently depend on unreleased OpenPLC Editor functionality, notably `openplc-cli` and `.dt` data-type persistence.
 
 ## Scope
