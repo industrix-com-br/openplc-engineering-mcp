@@ -13,15 +13,16 @@ def make_project(root: Path) -> Path:
     (root / "project.json").write_text(
         json.dumps({"meta": {"name": "Example", "type": "plc-project"}}), encoding="utf-8"
     )
-    (root / "pous" / "programs" / "main.st").write_text("PROGRAM main\nEND_PROGRAM\n", encoding="utf-8")
-    (root / "pous" / "function-blocks" / "Motor.json").write_text("{}", encoding="utf-8")
+    (root / "pous" / "programs" / "main.st").write_text(
+        "PROGRAM main\nEND_PROGRAM\n", encoding="utf-8"
+    )
     (root / "pous" / "function-blocks" / "Motor.st").write_text(
         "FUNCTION_BLOCK Motor\nEND_FUNCTION_BLOCK\n", encoding="utf-8"
     )
     return root
 
 
-def test_list_pous_prefers_source_representation(tmp_path: Path) -> None:
+def test_list_pous_uses_current_source_representation(tmp_path: Path) -> None:
     project = make_project(tmp_path / "project")
 
     pous = list_pous(str(project))
@@ -42,19 +43,14 @@ def test_list_pous_prefers_source_representation(tmp_path: Path) -> None:
     ]
 
 
-def test_json_only_pou_is_supported(tmp_path: Path) -> None:
+def test_json_only_pou_is_not_supported(tmp_path: Path) -> None:
     project = make_project(tmp_path / "project")
     (project / "pous" / "function-blocks" / "Motor.st").unlink()
+    (project / "pous" / "function-blocks" / "Motor.json").write_text("{}", encoding="utf-8")
 
-    pous = list_pous(str(project))
-    motor = next(pou for pou in pous if pou["name"] == "Motor")
-
-    assert motor == {
-        "name": "Motor",
-        "type": "function-block",
-        "language": None,
-        "path": "pous/function-blocks/Motor.json",
-    }
+    assert all(pou["name"] != "Motor" for pou in list_pous(str(project)))
+    with pytest.raises(ToolError, match="POU not found"):
+        read_pou(str(project), "Motor")
 
 
 def test_pou_names_are_deduplicated_globally(tmp_path: Path) -> None:
@@ -76,7 +72,7 @@ def test_pou_names_are_deduplicated_globally(tmp_path: Path) -> None:
     ]
 
 
-def test_read_pou_returns_preferred_source_content(tmp_path: Path) -> None:
+def test_read_pou_returns_source_content(tmp_path: Path) -> None:
     project = make_project(tmp_path / "project")
 
     pou = read_pou(str(project), "Motor")
@@ -87,21 +83,6 @@ def test_read_pou_returns_preferred_source_content(tmp_path: Path) -> None:
         "language": "st",
         "path": "pous/function-blocks/Motor.st",
         "content": "FUNCTION_BLOCK Motor\nEND_FUNCTION_BLOCK\n",
-    }
-
-
-def test_read_pou_supports_json_only_pou(tmp_path: Path) -> None:
-    project = make_project(tmp_path / "project")
-    (project / "pous" / "function-blocks" / "Motor.st").unlink()
-
-    pou = read_pou(str(project), "Motor")
-
-    assert pou == {
-        "name": "Motor",
-        "type": "function-block",
-        "language": None,
-        "path": "pous/function-blocks/Motor.json",
-        "content": "{}",
     }
 
 

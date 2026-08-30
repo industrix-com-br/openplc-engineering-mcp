@@ -13,7 +13,7 @@ PouType = Literal["program", "function-block", "function"]
 class PouInfo(TypedDict):
     name: str
     type: PouType
-    language: str | None
+    language: str
     path: str
 
 
@@ -33,7 +33,6 @@ _POU_LANGUAGES = {
     ".fbd": "fbd",
     ".py": "python",
     ".cpp": "cpp",
-    ".json": None,
 }
 
 
@@ -45,7 +44,7 @@ def _is_contained(root: Path, path: Path) -> bool:
 
 
 def _list_pous(root: Path) -> list[PouInfo]:
-    """List POUs, preferring source files over JSON representations with the same name."""
+    """List POUs recognized by the current OpenPLC Editor project layout."""
     by_name: dict[str, PouInfo] = {}
 
     for pou_type, relative_dir in _POU_DIRECTORIES:
@@ -59,8 +58,7 @@ def _list_pous(root: Path) -> list[PouInfo]:
                 "language": _POU_LANGUAGES[suffix],
                 "path": path.relative_to(root).as_posix(),
             }
-            existing = by_name.get(info["name"])
-            if existing is None or (existing["language"] is None and suffix != ".json"):
+            if info["name"] not in by_name:
                 by_name[info["name"]] = info
 
     return sorted(by_name.values(), key=lambda pou: (pou["type"], pou["name"], pou["path"]))
@@ -73,7 +71,7 @@ def list_pous(project_path: str) -> list[PouInfo]:
 
 
 def read_pou(project_path: str, pou_name: str) -> PouContent:
-    """Read a POU by name, preferring its source representation when available."""
+    """Read a current-format POU by name."""
     if not pou_name.strip():
         raise ToolError("pou_name must not be empty")
 

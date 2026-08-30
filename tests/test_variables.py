@@ -22,21 +22,6 @@ def make_source_project(
     return root
 
 
-def make_json_project(
-    root: Path,
-    content: str,
-    *,
-    name: str = "Motor",
-    pou_dir: str = "function-blocks",
-) -> Path:
-    (root / "pous" / pou_dir).mkdir(parents=True)
-    (root / "project.json").write_text(
-        json.dumps({"meta": {"name": "Example", "type": "plc-project"}}), encoding="utf-8"
-    )
-    (root / "pous" / pou_dir / f"{name}.json").write_text(content, encoding="utf-8")
-    return root
-
-
 def test_list_variables_reads_basic_local_variable(tmp_path: Path) -> None:
     project = make_source_project(
         tmp_path / "project",
@@ -226,113 +211,6 @@ def test_list_variables_rejects_unterminated_variable_block(tmp_path: Path) -> N
         list_variables(str(project), "Motor")
 
 
-def test_list_variables_supports_json_only_pou(tmp_path: Path) -> None:
-    pou = {
-        "name": "Motor",
-        "pouType": "function-block",
-        "interface": {
-            "variables": [
-                {
-                    "name": "Start",
-                    "class": "input",
-                    "type": {"definition": "base-type", "value": "BOOL"},
-                    "location": "",
-                    "initialValue": None,
-                    "documentation": "",
-                    "debug": False,
-                },
-                {
-                    "name": "Attempts",
-                    "class": "local",
-                    "type": {"definition": "base-type", "value": "INT"},
-                    "location": "",
-                    "initialValue": "0",
-                    "documentation": "Retry count",
-                    "debug": False,
-                },
-            ]
-        },
-        "body": {"language": "st", "value": ""},
-    }
-    project = make_json_project(tmp_path / "project", json.dumps(pou))
-
-    assert list_variables(str(project), "Motor") == [
-        {
-            "name": "Start",
-            "class": "input",
-            "type": "BOOL",
-            "location": None,
-            "initial_value": None,
-            "documentation": None,
-        },
-        {
-            "name": "Attempts",
-            "class": "local",
-            "type": "INT",
-            "location": None,
-            "initial_value": "0",
-            "documentation": "Retry count",
-        },
-    ]
-
-
-def test_json_function_return_type_is_not_reported_as_variable(tmp_path: Path) -> None:
-    pou = {
-        "name": "Calculate",
-        "pouType": "function",
-        "interface": {
-            "returnType": "REAL",
-            "variables": [
-                {
-                    "name": "Value",
-                    "class": "input",
-                    "type": {"definition": "base-type", "value": "REAL"},
-                    "location": "",
-                    "initialValue": None,
-                    "documentation": "",
-                }
-            ],
-        },
-        "body": {"language": "st", "value": ""},
-    }
-    project = make_json_project(
-        tmp_path / "project", json.dumps(pou), name="Calculate", pou_dir="functions"
-    )
-
-    variables = list_variables(str(project), "Calculate")
-
-    assert [variable["name"] for variable in variables] == ["Value"]
-
-
-@pytest.mark.parametrize(
-    ("content", "match"),
-    [
-        ("{not json", "invalid JSON"),
-        (json.dumps({"name": "Motor"}), "unsupported JSON POU representation"),
-        (json.dumps({"interface": {"variables": {"name": "X"}}}), "must be a list"),
-        (
-            json.dumps(
-                {
-                    "interface": {
-                        "variables": [
-                            {"name": "X", "type": {"definition": "base-type", "value": "BOOL"}}
-                        ]
-                    }
-                }
-            ),
-            "unsupported or missing class",
-        ),
-    ],
-)
-def test_list_variables_rejects_unreadable_json_pous(
-    tmp_path: Path, content: str, match: str
-) -> None:
-    project = make_json_project(tmp_path / "project", content)
-
-    with pytest.raises(ToolError, match=match):
-        list_variables(str(project), "Motor")
-
-
 def test_function_return_type_is_not_reported_as_variable(tmp_path: Path) -> None:
     project = make_source_project(
         tmp_path / "project",
@@ -352,14 +230,13 @@ END_FUNCTION
     assert [variable["name"] for variable in variables] == ["Value"]
 
 
-def make_configuration_project(root: Path, resource: dict[str, object], *, legacy: bool = False) -> Path:
+def make_configuration_project(root: Path, resource: dict[str, object]) -> Path:
     root.mkdir()
-    configuration_field = "configurations" if legacy else "configuration"
     (root / "project.json").write_text(
         json.dumps(
             {
                 "meta": {"name": "Example", "type": "plc-project"},
-                "data": {configuration_field: {"resource": resource}},
+                "data": {"configuration": {"resource": resource}},
             }
         ),
         encoding="utf-8",
@@ -377,7 +254,7 @@ GLOBAL_VARIABLES: list[dict[str, object]] = [
     },
     {
         "name": "CycleCount",
-        "type": "INT",
+        "type": {"definition": "base-type", "value": "INT"},
         "location": "",
         "initialValue": "0",
         "documentation": "",
@@ -420,7 +297,7 @@ def test_list_global_variables_forces_global_class(tmp_path: Path) -> None:
     variable = {
         "name": "Counter",
         "class": "local",
-        "type": "INT",
+        "type": {"definition": "base-type", "value": "INT"},
         "location": "",
         "initialValue": "",
         "documentation": "",
@@ -428,19 +305,6 @@ def test_list_global_variables_forces_global_class(tmp_path: Path) -> None:
     project = make_configuration_project(tmp_path / "project", {"globalVariables": [variable]})
 
     assert list_global_variables(str(project))[0]["class"] == "global"
-
-
-def test_list_global_variables_supports_legacy_configurations(tmp_path: Path) -> None:
-    project = make_configuration_project(
-        tmp_path / "project",
-        {"globalVariables": [GLOBAL_VARIABLES[1]]},
-        legacy=True,
-    )
-
-    variables = list_global_variables(str(project))
-
-    assert variables[0]["name"] == "CycleCount"
-    assert variables[0]["initial_value"] == "0"
 
 
 def test_list_global_variables_returns_empty_list_without_configuration(tmp_path: Path) -> None:
@@ -459,12 +323,26 @@ def test_list_global_variables_returns_empty_list_when_global_variables_absent(t
     assert list_global_variables(str(project)) == []
 
 
+def test_list_global_variables_rejects_string_type_representation(tmp_path: Path) -> None:
+    variable = {
+        "name": "Counter",
+        "type": "INT",
+        "location": "",
+        "initialValue": "",
+        "documentation": "",
+    }
+    project = make_configuration_project(tmp_path / "project", {"globalVariables": [variable]})
+
+    with pytest.raises(ToolError, match="declared type must be an object"):
+        list_global_variables(str(project))
+
+
 @pytest.mark.parametrize(
     ("variable", "match"),
     [
         ("not-an-object", "is not an object"),
-        ({"type": "INT"}, "missing a name"),
-        ({"name": "Counter"}, "missing a declared type"),
+        ({"type": {"definition": "base-type", "value": "INT"}}, "missing a name"),
+        ({"name": "Counter"}, "declared type must be an object"),
     ],
 )
 def test_list_global_variables_rejects_malformed_variables(

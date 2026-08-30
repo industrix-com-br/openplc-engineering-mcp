@@ -46,6 +46,8 @@ The source documentation remains in [`docs/`](docs/) and [`docs/index.md`](docs/
 
 ## Scope
 
+This MCP supports only the **current OpenPLC Editor project format**. Legacy OpenPLC project formats, historical project representations, automatic migration, and backward-compatibility parsing are intentionally unsupported.
+
 The current version focuses on project, execution-configuration, POU, data-type, and variable inspection and shallow project validation, plus compilation delegated to `openplc-cli`. Project modification, data-type modification, variable modification, deployment, runtime control, variable forcing, authentication, HTTP transport, and generic shell/filesystem tools are not implemented.
 
 See [`docs/scope.md`](docs/scope.md) for the current boundary.

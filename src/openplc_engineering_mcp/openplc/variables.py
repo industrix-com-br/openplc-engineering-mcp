@@ -1,8 +1,7 @@
-"""OpenPLC POU variable extraction."""
+"""OpenPLC POU and resource variable extraction."""
 
-import json
 import re
-from typing import Literal, TypedDict, cast
+from typing import Literal, TypedDict
 
 from mcp.server.mcpserver.exceptions import ToolError
 
@@ -59,80 +58,38 @@ def _optional_text(value: object, field: str) -> str | None:
     if value is None or value == "":
         return None
     if not isinstance(value, str):
-        raise ValueError(f'JSON variable field "{field}" must be a string or null')
+        raise ValueError(f'project variable field "{field}" must be a string or null')
     stripped = value.strip()
     return stripped or None
 
 
-def _json_type(value: object) -> str:
-    if isinstance(value, str):
-        declared_type = value.strip()
-    elif isinstance(value, dict):
-        type_value = value.get("value")
-        declared_type = type_value.strip() if isinstance(type_value, str) else ""
-    else:
-        declared_type = ""
+def _project_variable_type(value: object) -> str:
+    if not isinstance(value, dict):
+        raise ValueError("project variable declared type must be an object")
 
+    type_value = value.get("value")
+    declared_type = type_value.strip() if isinstance(type_value, str) else ""
     if not declared_type:
-        raise ValueError("JSON variable is missing a declared type")
+        raise ValueError("project variable is missing a declared type")
     return declared_type
 
 
-def _json_variable(value: object, index: int, scope_class: VariableClass | None = None) -> VariableInfo:
+def _global_variable(value: object, index: int) -> VariableInfo:
     if not isinstance(value, dict):
-        raise ValueError(f"JSON variable at index {index} is not an object")
+        raise ValueError(f"global variable at index {index} is not an object")
 
     name = value.get("name")
     if not isinstance(name, str) or not name.strip():
-        raise ValueError(f"JSON variable at index {index} is missing a name")
-
-    if scope_class is None:
-        variable_class = value.get("class")
-        if variable_class not in _VARIABLE_CLASSES.values():
-            raise ValueError(f'JSON variable "{name}" has an unsupported or missing class')
-        resolved_class = cast(VariableClass, variable_class)
-    else:
-        resolved_class = scope_class
+        raise ValueError(f"global variable at index {index} is missing a name")
 
     return {
         "name": name.strip(),
-        "class": resolved_class,
-        "type": _json_type(value.get("type")),
+        "class": "global",
+        "type": _project_variable_type(value.get("type")),
         "location": _optional_text(value.get("location"), "location"),
         "initial_value": _optional_text(value.get("initialValue"), "initialValue"),
         "documentation": _optional_text(value.get("documentation"), "documentation"),
     }
-
-
-def _json_variables(content: str) -> list[VariableInfo]:
-    """Extract variables from a supported JSON POU representation."""
-    try:
-        parsed = json.loads(content)
-    except json.JSONDecodeError as exc:
-        raise ValueError(f"invalid JSON representation: {exc.msg}") from exc
-
-    if not isinstance(parsed, dict):
-        raise ValueError("unsupported JSON POU representation")
-
-    raw_variables: object
-    data = parsed.get("data")
-    if isinstance(parsed.get("type"), str) and isinstance(data, dict):
-        raw_variables = data.get("variables", [])
-    else:
-        interface = parsed.get("interface")
-        if isinstance(interface, dict):
-            raw_variables = interface.get("variables", [])
-        elif isinstance(parsed.get("variables"), list):
-            raw_variables = parsed["variables"]
-        elif "pouType" in parsed or "body" in parsed:
-            raw_variables = []
-        else:
-            raise ValueError("unsupported JSON POU representation")
-
-    if not isinstance(raw_variables, list):
-        raise ValueError("JSON POU variables must be a list")
-
-    return [_json_variable(variable, index) for index, variable in enumerate(raw_variables)]
 
 
 def _source_variables(content: str) -> list[VariableInfo]:
@@ -200,12 +157,10 @@ def _source_variables(content: str) -> list[VariableInfo]:
 
 
 def list_variables(project_path: str, pou_name: str) -> list[VariableInfo]:
-    """List variables declared by a POU in source declaration order."""
+    """List variables declared by a current-format POU in source declaration order."""
     pou = read_pou(project_path, pou_name)
 
     try:
-        if pou["language"] is None:
-            return _json_variables(pou["content"])
         return _source_variables(pou["content"])
     except ValueError as exc:
         raise ToolError(f'Could not read variables for POU "{pou["name"]}": {exc}') from exc
@@ -223,9 +178,6 @@ def list_global_variables(project_path: str) -> list[VariableInfo]:
         raise ToolError("project.json global variables must be an array")
 
     try:
-        return [
-            _json_variable(variable, index, scope_class="global")
-            for index, variable in enumerate(raw_variables)
-        ]
+        return [_global_variable(variable, index) for index, variable in enumerate(raw_variables)]
     except ValueError as exc:
         raise ToolError(f"Could not read global variables: {exc}") from exc

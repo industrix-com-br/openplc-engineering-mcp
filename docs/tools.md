@@ -4,6 +4,8 @@ The current server registers exactly ten domain-oriented tools. All tools use `o
 
 The public registrations live in `src/openplc_engineering_mcp/server.py`. OpenPLC behavior is grouped by responsibility under `src/openplc_engineering_mcp/openplc/`.
 
+All project-inspection tools target the **current OpenPLC Editor project format only**. Historical project representations and backward-compatibility parsing are outside the supported contract. See [`scope.md`](scope.md).
+
 | Tool | Read-only | Purpose |
 | --- | --- | --- |
 | `get_project_structure` | yes | Inspect recognized files in an OpenPLC project |
@@ -28,9 +30,9 @@ Returns:
 - resolved project `path`;
 - project `name`;
 - project `type`;
-- sorted list of recognized project `files`.
+- sorted list of recognized current-format project `files`.
 
-Use [`openplc-projects.md`](openplc-projects.md) for the recognized layout.
+Historical JSON POU files are not included in the recognized POU layout. Use [`openplc-projects.md`](openplc-projects.md) for the supported structure.
 
 ## `list_pous`
 
@@ -38,14 +40,14 @@ Input:
 
 - `project_path: str`
 
-Returns the recognized Programs, Function Blocks, and Functions. Each item contains:
+Returns the current-format Programs, Function Blocks, and Functions discovered from recognized POU source files. Each item contains:
 
 - `name`;
 - `type`;
 - `language`;
 - project-relative `path`.
 
-See [`openplc-projects.md`](openplc-projects.md) for language mapping and deduplication behavior.
+Historical JSON-only POUs are not supported. See [`openplc-projects.md`](openplc-projects.md) for language mapping and discovery behavior.
 
 ## `list_datatypes`
 
@@ -53,9 +55,7 @@ Input:
 
 - `project_path: str`.
 
-Returns only the **project-defined data types** known to the OpenPLC project, sorted by name. The current OpenPLC persistence format is authoritative when one or more files exist under `datatypes/**/*.dt`; legacy `project.json.data.dataTypes` is used only when no `.dt` files exist.
-
-The first version exposes the three data-type derivations currently represented by OpenPLC.
+Returns only project-defined data types persisted in the current OpenPLC format under `datatypes/**/*.dt`, sorted by name.
 
 Enumeration:
 
@@ -99,19 +99,11 @@ Array:
 
 Declared field types and initial values remain strings. Inline array fields therefore remain domain-readable declarations such as `ARRAY [0..9] OF REAL`; IEC literals are not evaluated. Multidimensional array bounds are returned independently.
 
-Each `.dt` file must contain exactly one supported `TYPE ... END_TYPE` declaration, and its declared type name must match the file name case-insensitively. Malformed or unsupported definitions raise a tool error; the MCP does not silently skip a bad type and return a partial project view. A valid project with no project-defined data types returns an empty list.
+Each `.dt` file must contain exactly one supported `TYPE ... END_TYPE` declaration, and its declared type name must match the file name case-insensitively. Malformed or unsupported definitions raise a tool error; the MCP does not silently skip a bad type and return a partial project view.
 
-The first version intentionally does not provide:
+Embedded historical `project.json.data.dataTypes` definitions are not parsed. If they are the only data-type representation, the tool reports an unsupported OpenPLC project format.
 
-- built-in IEC type listing;
-- OpenPLC library data-type discovery;
-- data-type creation, modification, or deletion;
-- `read_datatype()` or `get_datatype()`;
-- reference search, dependency graphs, or recursive type resolution;
-- semantic validation of references between types;
-- a complete IEC 61131-3 grammar or AST.
-
-See [`openplc-projects.md`](openplc-projects.md) for the persistence and migration behavior.
+The tool intentionally does not provide built-in IEC type listing, library data-type discovery, modification, recursive resolution, dependency graphs, semantic reference validation, or a complete IEC 61131-3 grammar.
 
 ## `get_execution_configuration`
 
@@ -119,7 +111,7 @@ Input:
 
 - `project_path: str`.
 
-Returns the configured execution model of the project:
+Returns the configured execution model from `data.configuration.resource`:
 
 ```json
 {
@@ -141,24 +133,13 @@ Returns the configured execution model of the project:
 }
 ```
 
-Each Task contains its name, triggering mode, priority, and execution interval. For a `Cyclic` Task, `interval` preserves the stored IEC `TIME` string exactly. For an `Interrupt` Task, the MCP returns `interval: null` rather than presenting the stored interval field as cyclic timing.
+For a `Cyclic` Task, `interval` preserves the stored IEC `TIME` string exactly. For an `Interrupt` Task, the MCP returns `interval: null` rather than presenting the stored interval as cyclic timing.
 
-Each Program Instance contains its name, the Task reference, and the Program reference exactly as stored by OpenPLC. The MCP does not independently validate those references or evaluate IEC time literals.
+Each Program Instance contains its name, Task reference, and Program reference exactly as stored. The MCP does not independently validate those references or evaluate IEC time literals.
 
-A project with no execution configuration returns:
+A project with no execution configuration returns empty lists. Malformed current-format Task or Program Instance structures are MCP tool errors. The historical `data.configurations` representation is unsupported.
 
-```json
-{
-  "tasks": [],
-  "program_instances": []
-}
-```
-
-Malformed Task or Program Instance structures that cannot be represented reliably are MCP tool errors. Global variables and other neighboring `project.json` data are intentionally outside this tool.
-
-This tool reports the **configured execution model of the project**. It does not report which code is currently executing in a live OpenPLC Runtime; live execution state belongs to future runtime/debug tools.
-
-See [`openplc-projects.md`](openplc-projects.md) for the project representation this inspection depends on.
+This tool reports the configured project model, not live runtime execution state.
 
 ## `read_pou`
 
@@ -167,7 +148,7 @@ Input:
 - `project_path: str`;
 - `pou_name: str`.
 
-Returns one recognized POU with:
+Returns one current-format POU source with:
 
 - `name`;
 - `type`;
@@ -175,11 +156,7 @@ Returns one recognized POU with:
 - project-relative `path`;
 - `content` exactly as read from the selected UTF-8 source file.
 
-The caller identifies the POU by name rather than by filesystem path. `read_pou()` uses the same discovery and representation preference rules as `list_pous()`: a recognized source representation is preferred over a same-name `.json` representation, while JSON-only POUs remain readable with `language: null`.
-
-An empty `pou_name`, an unknown POU name, or an unreadable source file is exposed as an MCP tool error. The first version intentionally performs no parsing, normalization, dependency analysis, or modification of the POU content.
-
-See [`openplc-projects.md`](openplc-projects.md) for the underlying project behavior.
+The caller identifies the POU by name rather than by filesystem path. An empty `pou_name`, an unknown POU name, or an unreadable source file is exposed as an MCP tool error. The operation performs no parsing, normalization, dependency analysis, or modification of POU content.
 
 ## `list_variables`
 
@@ -188,7 +165,7 @@ Input:
 - `project_path: str`;
 - `pou_name: str`.
 
-Returns the variables declared by the selected POU in declaration order. Each item contains:
+Returns variables declared by the selected current-format POU source in declaration order. Each item contains:
 
 ```json
 {
@@ -215,19 +192,7 @@ Supported variable classes are:
 
 The `type` field preserves the declared type as a domain-readable string such as `BOOL`, `TON`, or `ARRAY[0..9] OF INT`. Initial values remain declaration-level strings and are not evaluated. A declared `AT` binding is returned as `location`; absent location, initial value, or documentation is returned as `null`.
 
-`list_variables()` builds on `read_pou()` and therefore uses the same POU name resolution and representation preference. Recognized source representations are inspected for declaration blocks. A selected legacy JSON-only POU is read from its structured variable data rather than interpreted as IEC source text.
-
-A valid POU with no variable declarations returns an empty list. Empty or unknown POU names, unsupported JSON variable representations, and malformed declarations that prevent reliable extraction are MCP tool errors. Parse failures are not converted to an empty list.
-
-The first version intentionally does not provide:
-
-- variable creation or updates;
-- project-wide variable search or reference analysis;
-- runtime variable reads, forcing, or debug state;
-- dependency analysis;
-- a structured mirror of OpenPLC's internal type model.
-
-See [`openplc-projects.md`](openplc-projects.md) for the OpenPLC behavior this extraction depends on.
+A valid POU with no variable declarations returns an empty list. Empty or unknown POU names and malformed declarations that prevent reliable extraction are MCP tool errors. Historical JSON POU variable representations are not supported.
 
 ## `list_global_variables`
 
@@ -235,7 +200,7 @@ Input:
 
 - `project_path: str`.
 
-Returns the project's **resource-level global variables** — exactly the entries stored under `data.configuration.resource.globalVariables` — in stored order. Each item uses the same public variable representation as [`list_variables`](#list_variables):
+Returns the project's resource-level global variables stored under `data.configuration.resource.globalVariables` in stored order. Each item uses the same public variable representation as [`list_variables`](#list_variables):
 
 ```json
 {
@@ -248,18 +213,11 @@ Returns the project's **resource-level global variables** — exactly the entrie
 }
 ```
 
-`class` is always `global` because the containing resource defines the scope, regardless of any stored class field. Declared types and initial values are preserved as strings; empty stored optional values (`""`) are normalized to `null` exactly like `list_variables()`.
+`class` is always `global` because the containing resource defines the scope. The declared type is read from the current OpenPLC structured type object's `value` field. Empty stored optional values are normalized to `null`.
 
-The tool intentionally returns only `configuration.resource.globalVariables`. It does not scan POUs for `VAR_GLOBAL` declarations and it does not include named global variable lists (`globalVariableLists` / GVLs); those are separate domain concepts.
+The tool intentionally does not scan POUs for `VAR_GLOBAL` declarations and does not include named global variable lists (`globalVariableLists` / GVLs).
 
-```text
-list_variables(project_path, pou_name)    -> variables declared by one POU
-list_global_variables(project_path)       -> configuration.resource.globalVariables
-```
-
-A project with no execution configuration or no `globalVariables` returns an empty list. A non-array `globalVariables` value, or an individual variable that cannot be represented reliably, is raised as an MCP tool error rather than being converted into an empty result.
-
-See [`openplc-projects.md`](openplc-projects.md) for the underlying project representation.
+A project with no execution configuration or no `globalVariables` returns an empty list. Structurally malformed current-format data is raised as an MCP tool error. Historical configuration and alternate variable representations are unsupported.
 
 ## `validate_project`
 
@@ -280,7 +238,7 @@ Returns a successful shallow validation result:
 
 Unrecoverable local precondition failures are MCP tool errors rather than `{ "valid": false }` results.
 
-The tool does not perform compiler-level or runtime-level validation. See [`openplc-projects.md`](openplc-projects.md).
+The tool intentionally validates only the minimum metadata needed by the MCP. Current supported project types are `plc-project` and `plc-library`; historical project type aliases are unsupported. The tool does not perform compiler-level or runtime-level validation.
 
 ## `compile_project`
 
@@ -326,9 +284,10 @@ An executed compilation with no `stderr` produces an empty list.
 Before adding a new tool:
 
 1. verify that the operation belongs inside the current scope;
-2. keep the public tool domain-oriented;
-3. keep the MCP registration in `server.py` thin;
-4. place OpenPLC-specific behavior in the smallest cohesive domain module;
-5. test MCP contract behavior through the official MCP SDK client;
-6. test domain behavior in the corresponding domain test module;
-7. update this document when the public tool contract changes.
+2. confirm that the representation is part of the current OpenPLC Editor project format;
+3. keep the public tool domain-oriented;
+4. keep the MCP registration in `server.py` thin;
+5. place OpenPLC-specific behavior in the smallest cohesive domain module;
+6. test MCP contract behavior through the official MCP SDK client;
+7. test domain behavior in the corresponding domain test module;
+8. update this document when the public tool contract changes.

@@ -123,33 +123,7 @@ def test_datatypes_are_sorted_by_name(tmp_path: Path) -> None:
     assert [data_type["name"] for data_type in list_datatypes(str(project))] == ["Alpha", "Zulu"]
 
 
-def test_dt_files_take_precedence_over_legacy_datatypes(tmp_path: Path) -> None:
-    project = make_project(
-        tmp_path,
-        {
-            "dataTypes": [
-                {
-                    "name": "LegacyType",
-                    "derivation": "enumerated",
-                    "values": [{"description": "Old"}],
-                    "initialValue": "Old",
-                }
-            ]
-        },
-    )
-    write_datatype(project, "CurrentType", "TYPE\nCurrentType : (New);\nEND_TYPE\n")
-
-    assert list_datatypes(str(project)) == [
-        {
-            "name": "CurrentType",
-            "kind": "enumerated",
-            "values": ["New"],
-            "initial_value": None,
-        }
-    ]
-
-
-def test_legacy_datatypes_are_normalized_when_no_dt_files_exist(tmp_path: Path) -> None:
+def test_project_json_datatypes_are_unsupported(tmp_path: Path) -> None:
     project = make_project(
         tmp_path,
         {
@@ -157,59 +131,14 @@ def test_legacy_datatypes_are_normalized_when_no_dt_files_exist(tmp_path: Path) 
                 {
                     "name": "OperatingMode",
                     "derivation": "enumerated",
-                    "values": [{"description": "Auto"}, {"description": "Manual"}],
-                    "initialValue": "Auto",
-                },
-                {
-                    "name": "MotorStatus",
-                    "derivation": "structure",
-                    "variable": [
-                        {
-                            "name": "speed",
-                            "type": {"definition": "base-type", "value": "REAL"},
-                            "initialValue": {"simpleValue": {"value": "0.0"}},
-                            "documentation": "Current motor speed",
-                        }
-                    ],
-                },
-                {
-                    "name": "TemperatureBuffer",
-                    "derivation": "array",
-                    "baseType": {"definition": "base-type", "value": "REAL"},
-                    "dimensions": [{"dimension": "0..9"}, {"dimension": "0..4"}],
-                    "initialValue": "",
-                },
+                    "values": [{"description": "Auto"}],
+                }
             ]
         },
     )
 
-    assert list_datatypes(str(project)) == [
-        {
-            "name": "MotorStatus",
-            "kind": "structure",
-            "fields": [
-                {
-                    "name": "speed",
-                    "type": "REAL",
-                    "initial_value": "0.0",
-                    "documentation": "Current motor speed",
-                }
-            ],
-        },
-        {
-            "name": "OperatingMode",
-            "kind": "enumerated",
-            "values": ["Auto", "Manual"],
-            "initial_value": "Auto",
-        },
-        {
-            "name": "TemperatureBuffer",
-            "kind": "array",
-            "base_type": "REAL",
-            "dimensions": ["0..9", "0..4"],
-            "initial_value": None,
-        },
-    ]
+    with pytest.raises(ToolError, match="Unsupported OpenPLC project format"):
+        list_datatypes(str(project))
 
 
 def test_invalid_dt_raises_tool_error(tmp_path: Path) -> None:
@@ -225,11 +154,4 @@ def test_dt_filename_must_match_declared_name(tmp_path: Path) -> None:
     write_datatype(project, "Alpha", "TYPE\nBeta : (A, B);\nEND_TYPE\n")
 
     with pytest.raises(ToolError, match="does not match filename identity"):
-        list_datatypes(str(project))
-
-
-def test_invalid_legacy_datatypes_raise_tool_error(tmp_path: Path) -> None:
-    project = make_project(tmp_path, {"dataTypes": {"name": "Broken"}})
-
-    with pytest.raises(ToolError, match="project.json data.dataTypes must be an array"):
         list_datatypes(str(project))

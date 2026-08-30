@@ -11,6 +11,7 @@ This repository implements an MCP server for the [OpenPLC Editor](https://github
 
 Project principles:
 
+- **OpenPLC project format:** support only the current OpenPLC Editor project format. Legacy formats, backward-compatibility fallbacks, migrations, and historical project representations are intentionally out of scope. Do not introduce legacy-format support unless the project scope is explicitly changed;
 - prefer the simplest implementation that solves the current requirement;
 - use the official MCP Python SDK rather than reproducing SDK behavior;
 - expose domain-oriented PLC engineering operations, not generic shell or filesystem access;
