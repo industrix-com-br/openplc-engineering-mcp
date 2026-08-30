@@ -6,6 +6,8 @@ from mcp.types import ToolAnnotations
 from openplc_engineering_mcp.openplc.compiler import CompileResult
 from openplc_engineering_mcp.openplc.compiler import compile_project as compile_openplc_project
 from openplc_engineering_mcp.openplc.compiler import get_diagnostics as read_compile_diagnostics
+from openplc_engineering_mcp.openplc.datatypes import DataTypeInfo
+from openplc_engineering_mcp.openplc.datatypes import list_datatypes as inspect_datatypes
 from openplc_engineering_mcp.openplc.execution import ExecutionConfiguration
 from openplc_engineering_mcp.openplc.execution import (
     get_execution_configuration as inspect_execution_configuration,
@@ -35,6 +37,12 @@ def get_project_structure(project_path: str) -> ProjectStructure:
 def list_pous(project_path: str) -> list[PouInfo]:
     """List the programs, function blocks, and functions in an OpenPLC project."""
     return inspect_pous(project_path)
+
+
+@mcp.tool(annotations=_READ_ONLY)
+def list_datatypes(project_path: str) -> list[DataTypeInfo]:
+    """List the project-defined data types of an OpenPLC project."""
+    return inspect_datatypes(project_path)
 
 
 @mcp.tool(annotations=_READ_ONLY)
