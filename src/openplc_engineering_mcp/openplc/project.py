@@ -6,7 +6,7 @@ from typing import Literal, TypedDict, cast
 
 from mcp.server.mcpserver.exceptions import ToolError
 
-ProjectType = Literal["plc-project", "plc-library", "PLC"]
+ProjectType = Literal["plc-project", "plc-library"]
 
 
 class ProjectStructure(TypedDict):
@@ -23,8 +23,9 @@ class ProjectValidation(TypedDict):
     warnings: list[str]
 
 
-_PROJECT_TYPES = {"plc-project", "plc-library", "PLC"}
-_SOURCE_SUFFIXES = {".st", ".il", ".ld", ".fbd", ".py", ".cpp", ".json"}
+_PROJECT_TYPES = {"plc-project", "plc-library"}
+_POU_SOURCE_SUFFIXES = {".st", ".il", ".ld", ".fbd", ".py", ".cpp"}
+_SOURCE_SUFFIXES = _POU_SOURCE_SUFFIXES | {".json"}
 
 
 def load_project_document(
@@ -93,14 +94,14 @@ def load_project(project_path: str) -> tuple[Path, str, ProjectType]:
 
 
 def get_configuration_resource(project: dict[str, object]) -> dict[str, object] | None:
-    """Return the current or legacy configuration resource of a parsed project document.
+    """Return the current OpenPLC configuration resource from a project document.
 
     Returns:
-        The ``data.configuration.resource`` object, falling back to the legacy
-        ``data.configurations.resource`` object, or ``None`` when neither is present.
+        The ``data.configuration.resource`` object, or ``None`` when it is absent.
 
     Raises:
-        ToolError: If any part of the configuration resource path has an invalid type.
+        ToolError: If the configuration resource path has an invalid type or uses the
+            unsupported historical ``data.configurations`` representation.
     """
     data = project.get("data")
     if data is None:
@@ -109,20 +110,18 @@ def get_configuration_resource(project: dict[str, object]) -> dict[str, object] 
         raise ToolError("project.json data must be an object")
 
     configuration = data.get("configuration")
-    configuration_field = "configuration"
     if configuration is None:
-        configuration = data.get("configurations")
-        configuration_field = "configurations"
-    if configuration is None:
+        if "configurations" in data:
+            raise ToolError("Unsupported OpenPLC project format: expected data.configuration")
         return None
     if not isinstance(configuration, dict):
-        raise ToolError(f"project.json data.{configuration_field} must be an object")
+        raise ToolError("project.json data.configuration must be an object")
 
     resource = configuration.get("resource")
     if resource is None:
         return None
     if not isinstance(resource, dict):
-        raise ToolError(f"project.json data.{configuration_field}.resource must be an object")
+        raise ToolError("project.json data.configuration.resource must be an object")
     return cast(dict[str, object], resource)
 
 
@@ -168,7 +167,7 @@ def get_project_structure(project_path: str) -> ProjectStructure:
             files.append(relative_path)
 
     for relative_dir in ("pous/functions", "pous/function-blocks", "pous/programs"):
-        files.extend(_recognized_files(root, relative_dir, _SOURCE_SUFFIXES))
+        files.extend(_recognized_files(root, relative_dir, _POU_SOURCE_SUFFIXES))
 
     files.extend(_recognized_files(root, "devices/servers", _SOURCE_SUFFIXES))
     files.extend(_recognized_files(root, "devices/remote", _SOURCE_SUFFIXES))
