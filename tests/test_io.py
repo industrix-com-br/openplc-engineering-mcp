@@ -113,6 +113,17 @@ def test_missing_device_files_use_current_openplc_defaults(tmp_path: Path) -> No
     }
 
 
+def test_configuration_without_device_board_follows_openplc_schema_default(tmp_path: Path) -> None:
+    project = make_project(tmp_path / "project")
+    devices = project / "devices"
+    devices.mkdir()
+    (devices / "configuration.json").write_text(
+        json.dumps({"communicationPort": "/dev/ttyACM0"}), encoding="utf-8"
+    )
+
+    assert get_io_configuration(str(project))["device_board"] == "OpenPLC Simulator"
+
+
 def test_malformed_device_configuration_json_is_rejected(tmp_path: Path) -> None:
     project = make_project(tmp_path / "project")
     devices = project / "devices"
@@ -150,6 +161,8 @@ def test_malformed_pin_mapping_json_is_rejected(tmp_path: Path) -> None:
         ("2", "pin 0 must be an object"),
         ({"pin": "", "pinType": "digitalInput", "address": "%IX0.0"}, "pin must be"),
         ({"pin": "2", "pinType": "digital", "address": "%IX0.0"}, "pinType must be"),
+        ({"pin": "2", "pinType": [], "address": "%IX0.0"}, "pinType must be"),
+        ({"pin": "2", "pinType": {}, "address": "%IX0.0"}, "pinType must be"),
         ({"pin": "2", "pinType": "digitalInput", "address": 0}, "address must be"),
         (
             {"pin": "2", "pinType": "digitalInput", "address": "%IX0.0", "alias": 2},

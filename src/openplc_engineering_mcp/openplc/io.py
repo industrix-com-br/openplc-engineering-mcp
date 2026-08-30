@@ -39,6 +39,7 @@ def _read_device_json(path: Path, label: str) -> object:
 
 
 def _load_device_board(root: Path) -> str:
+    """Return the selected device board, following the schema default when it is absent."""
     path = root / "devices" / "configuration.json"
     if not path.is_file():
         return _DEFAULT_DEVICE_BOARD
@@ -54,6 +55,7 @@ def _load_device_board(root: Path) -> str:
 
 
 def _parse_pin(pin: object, board: str, index: int) -> IOPoint:
+    """Parse and validate a single current-format DevicePin entry."""
     if not isinstance(pin, dict):
         raise ToolError(f'devices/pin-mapping.json board "{board}" pin {index} must be an object')
 
@@ -70,7 +72,7 @@ def _parse_pin(pin: object, board: str, index: int) -> IOPoint:
     prefix = f'devices/pin-mapping.json board "{board}" pin {index}'
     if not isinstance(pin_number, str) or not pin_number:
         raise ToolError(f"{prefix}.pin must be a non-empty string")
-    if pin_type not in _PIN_TYPES:
+    if not isinstance(pin_type, str) or pin_type not in _PIN_TYPES:
         raise ToolError(f"{prefix}.pinType must be a supported OpenPLC pin type")
     if not isinstance(address, str):
         raise ToolError(f"{prefix}.address must be a string")
@@ -86,6 +88,7 @@ def _parse_pin(pin: object, board: str, index: int) -> IOPoint:
 
 
 def _load_pin_mappings(root: Path) -> dict[str, list[IOPoint]]:
+    """Load and validate the complete canonical per-board pin mapping."""
     path = root / "devices" / "pin-mapping.json"
     if not path.is_file():
         return {}
