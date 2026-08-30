@@ -9,15 +9,15 @@ MCP Host / LLM Agent
         v
 OpenPLC Engineering MCP
         |
-        +-- project.py ----- local OpenPLC project files
+        +-- project.py ----- current OpenPLC project files
         |
         +-- execution.py --- execution configuration in project.json
         |
-        +-- pous.py -------- local OpenPLC project files
+        +-- pous.py -------- current OpenPLC POU source files
         |
         +-- variables.py --- POU and resource global variable declarations
         |
-        +-- datatypes.py --- project-defined data types
+        +-- datatypes.py --- datatypes/*.dt
         |
         +-- compiler.py ---- openplc-cli
 ```
@@ -29,8 +29,9 @@ The server provides a small domain-oriented interface between an MCP-compatible 
 1. **Keep the boundary domain-oriented.** Expose PLC engineering operations rather than generic shell or filesystem tools.
 2. **Use the official MCP SDK.** Do not reproduce transport, discovery, tool-calling, or protocol behavior already provided by the SDK.
 3. **Keep OpenPLC authoritative.** Do not copy the complete OpenPLC project schema or reimplement compilation semantics inside the MCP server.
-4. **Prefer small functions and direct code.** Add layers only when a concrete requirement makes them necessary.
-5. **Expand capabilities incrementally.** Current inspection and diagnostics operations are read-only. Compilation is the only local write-capable operation and delegates to `openplc-cli`.
+4. **Support the current project format only.** Historical OpenPLC project representations, migrations, and compatibility fallbacks are outside the architecture boundary.
+5. **Prefer small functions and direct code.** Add layers only when a concrete requirement makes them necessary.
+6. **Expand capabilities incrementally.** Current inspection and diagnostics operations are read-only. Compilation is the only local write-capable operation and delegates to `openplc-cli`.
 
 ## Module responsibilities
 
@@ -53,7 +54,7 @@ Responsible for project-level behavior shared by the other OpenPLC modules:
 - resolving and checking project paths;
 - reading and validating the minimum metadata from `project.json`;
 - retaining the parsed project document for domain inspections that need it;
-- providing the shared current/legacy configuration-resource lookup;
+- providing the shared `data.configuration.resource` lookup;
 - enforcing the minimum project preconditions;
 - providing shallow project validation;
 - listing relevant project files;
@@ -63,8 +64,7 @@ Responsible for project-level behavior shared by the other OpenPLC modules:
 
 Responsible for configured execution-model inspection:
 
-- reading the configuration resource from the validated project document through the shared project lookup;
-- supporting current `data.configuration` and legacy `data.configurations` storage;
+- reading `data.configuration.resource` from the validated project document;
 - validating the Task and Program Instance fields required by the public contract;
 - preserving cyclic IEC interval strings while returning no interval for interrupt Tasks;
 - returning only Tasks and Program Instances, not neighboring configuration data.
@@ -73,31 +73,28 @@ Responsible for configured execution-model inspection:
 
 Responsible for POU behavior:
 
-- discovering Programs, Function Blocks, and Functions;
+- discovering Programs, Function Blocks, and Functions from current POU source files;
 - reading POU content by domain name;
-- mapping recognized suffixes to reported languages;
-- preferring a source representation over JSON when both exist;
+- mapping recognized source suffixes to reported languages;
 - returning deduplicated, sorted POU information.
 
 ### `openplc/variables.py`
 
-Responsible for POU variable inspection:
+Responsible for variable inspection:
 
 - resolving the POU through the shared `read_pou()` behavior;
-- extracting variables from recognized source declarations using the same block classes and restrictions the current OpenPLC Editor applies;
-- reading structured variables from legacy JSON-only POUs;
+- extracting variables from current POU source declarations using the block classes and restrictions the OpenPLC Editor applies;
 - preserving declaration order and declaration-level type strings;
-- listing resource-level global variables from `configuration.resource.globalVariables`;
+- listing resource-level global variables from `data.configuration.resource.globalVariables`;
 - raising tool errors when declarations cannot be interpreted reliably.
 
 ### `openplc/datatypes.py`
 
 Responsible for project-defined data-type inspection:
 
-- preferring canonical `datatypes/**/*.dt` files whenever any are present;
+- reading canonical `datatypes/**/*.dt` files;
 - parsing only the enumerated, structure, and array forms persisted by the current OpenPLC Editor;
 - enforcing the `.dt` filename as the data type identity;
-- normalizing legacy `project.json.data.dataTypes` only when no `.dt` files exist;
 - returning domain-readable declared types without exposing OpenPLC's internal variable-type objects;
 - raising tool errors instead of returning partial results for malformed definitions.
 
@@ -133,9 +130,9 @@ openplc.datatypes ─► openplc.project
 openplc.compiler ──► openplc.project
 ```
 
-`project.py` does not depend on the execution, POU, variable, data-type, or compiler modules. It is the shared lower-level dependency for local project loading, configuration-resource lookup, and recognized source-file discovery.
+`project.py` does not depend on the execution, POU, variable, data-type, or compiler modules. It is the shared lower-level dependency for local project loading, current configuration-resource lookup, and recognized source-file discovery.
 
-There are no service, repository, adapter, client, or one-file-per-tool layers.
+There are no service, repository, adapter, client, project-version resolver, or one-file-per-tool layers.
 
 ## State
 
