@@ -21,6 +21,7 @@ Do not load the entire `docs/` directory by default.
 | Task | Read first | Then inspect when needed |
 | --- | --- | --- |
 | Understand the project quickly | [`architecture.md`](architecture.md), [`scope.md`](scope.md) | `README.md` |
+| Check OpenPLC version or project-format compatibility | [`openplc-projects.md`](openplc-projects.md), [`scope.md`](scope.md) | Upstream OpenPLC Editor PRs/releases when revalidating the boundary |
 | Install, run, or inspect the server | [`getting-started.md`](getting-started.md) | `pyproject.toml`, `src/openplc_engineering_mcp/server.py` |
 | Add or change an MCP tool | [`tools.md`](tools.md), [`architecture.md`](architecture.md) | `src/openplc_engineering_mcp/server.py`, relevant `src/openplc_engineering_mcp/openplc/` module, `tests/test_server.py` |
 | Change OpenPLC project discovery or validation | [`openplc-projects.md`](openplc-projects.md), [`tools.md`](tools.md) | `src/openplc_engineering_mcp/openplc/project.py`, `tests/test_project.py` |
@@ -50,7 +51,7 @@ Load for the current ten MCP tools, inputs, outputs, annotations, errors, and di
 
 ### [`openplc-projects.md`](openplc-projects.md)
 
-Load for project preconditions, recognized project layout, execution configuration, data types, POU discovery, validation, and CLI integration semantics.
+Load for the OpenPLC compatibility baseline, project preconditions, recognized project layout, execution configuration, data types, POU discovery, validation, and CLI integration semantics.
 
 ### [`development.md`](development.md)
 
