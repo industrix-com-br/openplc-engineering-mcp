@@ -121,32 +121,21 @@ def test_absent_execution_configuration_returns_empty_lists(tmp_path: Path) -> N
     }
 
 
-def test_legacy_configurations_form_is_supported(tmp_path: Path) -> None:
+def test_legacy_configurations_form_is_rejected(tmp_path: Path) -> None:
     project = make_project(
         tmp_path / "project",
         data={
             "configurations": {
                 "resource": {
-                    "tasks": [
-                        {
-                            "name": "LegacyTask",
-                            "triggering": "Cyclic",
-                            "interval": "T#100ms",
-                            "priority": 2,
-                        }
-                    ],
-                    "instances": [
-                        {"name": "LegacyInstance", "task": "LegacyTask", "program": "legacy"}
-                    ],
+                    "tasks": [],
+                    "instances": [],
                 }
             }
         },
     )
 
-    result = get_execution_configuration(str(project))
-
-    assert result["tasks"][0]["name"] == "LegacyTask"
-    assert result["program_instances"][0]["program"] == "legacy"
+    with pytest.raises(ToolError, match="Unsupported OpenPLC project format"):
+        get_execution_configuration(str(project))
 
 
 def test_malformed_tasks_structure_is_rejected(tmp_path: Path) -> None:
