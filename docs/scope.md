@@ -37,6 +37,19 @@ Intentionally unsupported:
 
 The MCP does not detect, convert, or normalize historical project versions. A legacy representation may be ignored when it is outside a tool's recognized current layout or rejected when it would otherwise make the result ambiguous.
 
+## OpenPLC Editor compatibility
+
+The current MCP feature set targets the OpenPLC Editor `development` branch after the upstream changes merged on August 24, 2026 for:
+
+- `datatypes/*.dt` persistence (OpenPLC Editor PR #999);
+- the headless CLI used by compilation (OpenPLC Editor PR #1026).
+
+No published OpenPLC Editor release currently provides that complete feature set. The latest release, v4.2.11 from August 11, 2026, predates both changes.
+
+The native text-based POU representation itself was introduced earlier by OpenPLC Editor PR #411 and shipped in v4.1.0. Therefore v4.1.0 marks the POU-format breakline, but it is **not** a complete compatibility baseline for this MCP.
+
+Detailed project-format behavior is documented in [`openplc-projects.md`](openplc-projects.md).
+
 ## Current boundary
 
 The implementation currently covers:
