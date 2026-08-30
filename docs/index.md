@@ -25,6 +25,7 @@ Do not load the entire `docs/` directory by default.
 | Change execution configuration inspection | [`openplc-projects.md`](openplc-projects.md), [`tools.md`](tools.md) | `src/openplc_engineering_mcp/openplc/execution.py`, `tests/test_execution.py` |
 | Change POU discovery or access | [`openplc-projects.md`](openplc-projects.md), [`tools.md`](tools.md) | `src/openplc_engineering_mcp/openplc/pous.py`, `tests/test_pous.py` |
 | Change POU variable inspection | [`openplc-projects.md`](openplc-projects.md), [`tools.md`](tools.md) | `src/openplc_engineering_mcp/openplc/variables.py`, `tests/test_variables.py` |
+| Change project data-type inspection | [`openplc-projects.md`](openplc-projects.md), [`tools.md`](tools.md) | `src/openplc_engineering_mcp/openplc/datatypes.py`, `tests/test_datatypes.py` |
 | Change OpenPLC compilation or diagnostics | [`tools.md`](tools.md), [`architecture.md`](architecture.md) | `src/openplc_engineering_mcp/openplc/compiler.py`, `tests/test_compiler.py` |
 | Change MCP registration or transport behavior | [`architecture.md`](architecture.md), [`tools.md`](tools.md) | `src/openplc_engineering_mcp/server.py`, `tests/test_server.py` |
 | Add or update tests, linting, or type checking | [`development.md`](development.md) | `pyproject.toml`, relevant tests |
@@ -43,11 +44,11 @@ Load for system boundaries, module responsibilities, dependency direction, and p
 
 ### [`tools.md`](tools.md)
 
-Load for the current nine MCP tools, inputs, outputs, annotations, errors, and diagnostics behavior.
+Load for the current ten MCP tools, inputs, outputs, annotations, errors, and diagnostics behavior.
 
 ### [`openplc-projects.md`](openplc-projects.md)
 
-Load for project preconditions, recognized project layout, execution configuration, POU discovery, validation, and CLI integration semantics.
+Load for project preconditions, recognized project layout, execution configuration, data types, POU discovery, validation, and CLI integration semantics.
 
 ### [`development.md`](development.md)
 
@@ -67,17 +68,19 @@ The implementation is intentionally small and organized by domain responsibility
 
 | File | Responsibility |
 | --- | --- |
-| `src/openplc_engineering_mcp/server.py` | MCP server creation, nine tool registrations, annotations, and stdio entry point |
+| `src/openplc_engineering_mcp/server.py` | MCP server creation, ten tool registrations, annotations, and stdio entry point |
 | `src/openplc_engineering_mcp/openplc/project.py` | Project loading preconditions, shallow validation, parsed-document loading, configuration-resource and structure inspection, and shared source-file scanning |
 | `src/openplc_engineering_mcp/openplc/execution.py` | Task and Program Instance inspection from OpenPLC execution configuration |
 | `src/openplc_engineering_mcp/openplc/pous.py` | POU discovery and reading, language mapping, representation preference, and deduplication |
 | `src/openplc_engineering_mcp/openplc/variables.py` | POU variable extraction from source declarations or structured JSON POU data, and resource-level global variable inspection |
+| `src/openplc_engineering_mcp/openplc/datatypes.py` | Project-defined data-type discovery and normalization from current `.dt` files or legacy project JSON |
 | `src/openplc_engineering_mcp/openplc/compiler.py` | `openplc-cli` compilation, JSON output parsing, and process-local diagnostics |
 | `tests/test_server.py` | MCP-level contract tests using the official SDK client |
 | `tests/test_project.py` | Project behavior tests |
 | `tests/test_execution.py` | Execution configuration behavior tests |
 | `tests/test_pous.py` | POU behavior tests |
 | `tests/test_variables.py` | POU variable extraction tests |
+| `tests/test_datatypes.py` | Project-defined data-type inspection tests |
 | `tests/test_compiler.py` | Compiler and diagnostics behavior tests |
 | `pyproject.toml` | Package metadata, dependencies, scripts, linting, and type-checking configuration |
 
