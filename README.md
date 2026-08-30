@@ -46,9 +46,12 @@ The source documentation remains in [`docs/`](docs/) and [`docs/index.md`](docs/
 
 ## Compatibility
 
-- **Project format:** targets the native text-based OpenPLC Editor project format introduced in v4.1.0.
-- **Backward compatibility:** intentionally not provided. Legacy JSON-centric OpenPLC projects are out of scope.
-- **Development dependency:** some MCP capabilities currently depend on unreleased OpenPLC Editor functionality, notably `openplc-cli` and `.dt` data-type persistence.
+- **Full compatibility target:** the current OpenPLC Editor `development` branch after the August 24, 2026 changes that added `datatypes/*.dt` persistence and the headless CLI used by this MCP.
+- **Released versions:** no published OpenPLC Editor release currently provides the complete feature set expected by this MCP. The latest release, v4.2.11 from August 11, 2026, predates those changes.
+- **POU format boundary:** native text-based POU persistence was introduced by OpenPLC Editor PR #411 and shipped in v4.1.0. This establishes the POU-format breakline, but v4.1.0 alone is not a full MCP compatibility baseline.
+- **Backward compatibility:** intentionally not provided. Legacy JSON-centric OpenPLC project representations are out of scope.
+
+See [`docs/openplc-projects.md`](docs/openplc-projects.md) for the detailed compatibility boundary.
 
 ## Scope
 

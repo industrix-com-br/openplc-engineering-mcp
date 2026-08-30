@@ -9,6 +9,8 @@ Use this document for local setup and execution only.
 - `openplc-cli` on `PATH` when using `compile_project`
 - Node.js/npm only when using MCP Inspector through `mcp dev`
 
+The headless OpenPLC CLI used by `compile_project()` was merged into the OpenPLC Editor `development` branch on August 24, 2026 (PR #1026) and is newer than the latest published Editor release v4.2.11. See [`openplc-projects.md`](openplc-projects.md#compatibility-baseline) for the complete compatibility boundary.
+
 ## Install
 
 ```bash
