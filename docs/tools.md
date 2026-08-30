@@ -1,6 +1,6 @@
 # MCP tools
 
-The current server registers exactly eleven domain-oriented tools. All tools use `open_world_hint: false`. Inspection and diagnostics tools are read-only; `compile_project` is registered with `read_only_hint: false` because the OpenPLC CLI may write local build artifacts.
+The current server registers exactly twelve domain-oriented tools. All tools use `open_world_hint: false`. Inspection and diagnostics tools are read-only; `compile_project` and `update_pou` are registered with `read_only_hint: false`. Compilation may write local build artifacts through the OpenPLC CLI; `update_pou` replaces the persisted content of one existing Structured Text POU.
 
 The public registrations live in `src/openplc_engineering_mcp/server.py`. OpenPLC behavior is grouped by responsibility under `src/openplc_engineering_mcp/openplc/`.
 
@@ -14,6 +14,7 @@ All project-inspection tools target the **current OpenPLC Editor project format 
 | `get_execution_configuration` | yes | Inspect configured Tasks and Program Instances |
 | `get_io_configuration` | yes | Inspect the selected device board and its active local physical I/O mapping |
 | `read_pou` | yes | Read a POU by domain name without requiring its filesystem path |
+| `update_pou` | no | Replace the complete content of an existing Structured Text POU |
 | `list_variables` | yes | Inspect variables declared by a POU |
 | `list_global_variables` | yes | Inspect the project's resource-level global variables |
 | `validate_project` | yes | Check the MCP's shallow project preconditions |
@@ -198,9 +199,71 @@ Returns one current-format POU source with:
 - `type`;
 - `language`;
 - project-relative `path`;
-- `content` exactly as read from the selected UTF-8 source file.
+- `content` exactly as read from the selected UTF-8 source file;
+- `content_hash`, an exact-byte SHA-256 token of the persisted file.
 
 The caller identifies the POU by name rather than by filesystem path. An empty `pou_name`, an unknown POU name, or an unreadable source file is exposed as an MCP tool error. The operation performs no parsing, normalization, dependency analysis, or modification of POU content.
+
+The `content` and `content_hash` are derived from the same exact persisted bytes with no newline normalization, so the pair always describes one consistent version. The hash is the optimistic-concurrency token required by [`update_pou`](#update_pou).
+
+## `update_pou`
+
+Input:
+
+- `project_path: str`;
+- `pou_name: str`;
+- `content: str`;
+- `expected_content_hash: str`.
+
+Replaces the complete persisted representation of an existing Structured Text POU selected by domain name. The caller never supplies a filesystem path; the MCP resolves the canonical POU file internally. The operation updates one existing POU in place — it does not create, delete, rename, move, or convert POUs.
+
+Returns the updated POU identity and the new exact-byte hash:
+
+```json
+{
+  "name": "MAIN",
+  "content_hash": "sha256:..."
+}
+```
+
+Writable scope:
+
+- Structured Text (`.st`) is the only writable language in v1;
+- supported existing POU types are Program, Function Block, and Function;
+- the whole POU is replaced, so documentation, a Function return type, POU-local declaration blocks, body logic, comments, and formatting may all change together;
+- POU-local variables are therefore modified through the complete replacement rather than separate variable tools.
+
+Immutable identity:
+
+- the POU name, type, language, and canonical path never change;
+- the replacement must declare the same POU type keyword and exactly the target name;
+- a Function replacement must declare a return type;
+- the matching `END_PROGRAM` / `END_FUNCTION_BLOCK` / `END_FUNCTION` keyword must be present.
+
+A rename, type change, or language change is a different domain operation and is rejected.
+
+Optimistic concurrency:
+
+- `expected_content_hash` is required and must match the exact bytes currently on disk;
+- it is normally the `content_hash` returned by the `read_pou()` the edit is based on;
+- a stale or malformed hash rejects the update and leaves the target unchanged.
+
+Update-time POU resolution is stricter than the read/list tools. If more than one recognized current-format source file shares the requested stem, the update is rejected as ambiguous instead of silently choosing one.
+
+Existing POUs in other languages (`il`, `ld`, `fbd`, `python`, `cpp`) remain readable through the read tools but are rejected by `update_pou` before any mutation.
+
+Persistence safety:
+
+- the replacement is written to a temporary file in the target directory, flushed, `fsync`ed, re-checked against the expected hash, then atomically moved into place;
+- the original POU is never truncated directly;
+- every validation, concurrency, or I/O failure before the final replacement leaves the original bytes unchanged;
+- no backup or history files are created.
+
+`update_pou` deliberately does not compile. Semantic correctness remains the responsibility of an explicit `compile_project()` / `get_diagnostics()` step, which keeps persistence success and compilation success as separate observable facts.
+
+An empty name, empty replacement, malformed expected hash, unknown or ambiguous POU, unsupported language, symbolic-link or non-regular target, stale hash, identity mismatch, missing terminal keyword, or filesystem failure is exposed as an MCP tool error.
+
+This operation should not be used while the same project is actively open in the OpenPLC Editor. See [`openplc-projects.md`](openplc-projects.md) for the editor-interaction limitation.
 
 ## `list_variables`
 

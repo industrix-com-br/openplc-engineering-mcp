@@ -33,7 +33,7 @@ The server provides a small domain-oriented interface between an MCP-compatible 
 3. **Keep OpenPLC authoritative.** Do not copy the complete OpenPLC project schema or reimplement compilation semantics inside the MCP server.
 4. **Support the current project format only.** Historical OpenPLC project representations, migrations, and compatibility fallbacks are outside the architecture boundary.
 5. **Prefer small functions and direct code.** Add layers only when a concrete requirement makes them necessary.
-6. **Expand capabilities incrementally.** Current inspection and diagnostics operations are read-only. Compilation is the only local write-capable operation and delegates to `openplc-cli`.
+6. **Expand capabilities incrementally.** Current inspection and diagnostics operations are read-only. Compilation and `update_pou` are the only local write-capable operations: compilation delegates to `openplc-cli`, and `update_pou` atomically replaces one existing Structured Text POU file.
 
 ## Module responsibilities
 
@@ -42,7 +42,7 @@ The server provides a small domain-oriented interface between an MCP-compatible 
 Responsible for:
 
 - creating the `MCPServer`;
-- registering the eleven public MCP tools;
+- registering the twelve public MCP tools;
 - applying tool annotations;
 - exposing the package entry point;
 - starting the stdio server.
@@ -89,9 +89,10 @@ The module is deliberately a focused device-I/O reader rather than a generic JSO
 Responsible for POU behavior:
 
 - discovering Programs, Function Blocks, and Functions from current POU source files;
-- reading POU content by domain name;
+- reading POU content by domain name and returning an exact-byte content hash;
 - mapping recognized source suffixes to reported languages;
-- returning deduplicated, sorted POU information.
+- returning deduplicated, sorted POU information;
+- replacing the complete content of one existing Structured Text POU with identity validation, required optimistic concurrency, and atomic single-file replacement.
 
 ### `openplc/variables.py`
 

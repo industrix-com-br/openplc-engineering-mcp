@@ -785,7 +785,7 @@ ST is sufficient for a meaningful first experimental write surface and avoids ma
 
 ### 16.1 Error model
 
-Use existing `ToolError` conventions; do not add an exception class hierarchy.
+Use existing `ToolError` conventions; do not add an exception class hierarchy. Message literals follow the existing style of quoting the offending value with double quotes (for example, `POU not found: "MAIN"`).
 
 Meaningful failures:
 
@@ -795,8 +795,8 @@ User/agent input:
 POU name must not be empty
 Replacement POU content must not be empty
 Invalid expected content hash
-Replacement POU name does not match target 'MAIN'
-Replacement POU type does not match target type 'program'
+Replacement POU name does not match target "MAIN"
+Replacement POU type does not match target type "program"
 Replacement Function must declare a return type
 Replacement POU is missing END_PROGRAM
 ```
@@ -804,9 +804,9 @@ Replacement POU is missing END_PROGRAM
 Project state:
 
 ```text
-POU not found: MAIN
-Ambiguous POU name: MAIN
-POU language 'ld' is not supported for update; v1 supports Structured Text only
+POU not found: "MAIN"
+Ambiguous POU name: "MAIN"
+POU language "ld" is not supported for update; v1 supports Structured Text only
 POU target is not a regular project file
 POU target is a symbolic link and cannot be updated
 ```
@@ -814,13 +814,13 @@ POU target is a symbolic link and cannot be updated
 Concurrency:
 
 ```text
-POU changed since it was read: MAIN; call read_pou() again before updating
+POU changed since it was read: "MAIN"; call read_pou() again before updating
 ```
 
 I/O:
 
 ```text
-Could not update POU 'MAIN': <concise OS error>
+Could not update POU "MAIN": <concise OS error>
 ```
 
 Compiler errors remain compiler diagnostics, not `update_pou()` validation errors.
@@ -1312,7 +1312,7 @@ Core fix `3da85070966c5a7803313483ec1f61cbb9d426e3`. A failed graphical write-ba
 <https://github.com/Autonomy-Logic/openplc-editor/commit/3da85070966c5a7803313483ec1f61cbb9d426e3>
 
 **[O14] DOPE-592 — unrecoverable graphical body protection**  
-PR #1055 and commit `ac52930777b8386a21273a6a462248b97be6a261`. An unreadable graphical POU must not become a savable blank canvas.  
+PR #1055, merged as `acaaf7dcf55b0490394bccf04105fab64c319c8d`; commit `ac52930777b8386a21273a6a462248b97be6a261` is a review-follow-up commit within that PR. An unreadable graphical POU must not become a savable blank canvas.  
 <https://github.com/Autonomy-Logic/openplc-editor/pull/1055>  
 <https://github.com/Autonomy-Logic/openplc-editor/commit/ac52930777b8386a21273a6a462248b97be6a261>
 
@@ -1325,7 +1325,7 @@ Commit `65be936a6123c0cbcd6df688db62293ae3c688b3` — Program-instance rename pr
 <https://github.com/Autonomy-Logic/openplc-editor/commit/65be936a6123c0cbcd6df688db62293ae3c688b3>
 
 **[O17] Save-queue concurrency/interruption history**  
-Commit `a6999a8c7c95b5b6eab1eed5226fbb6865ca4b75` — per-file save-queue correctness.  
+Commit `a6999a8c7c95b5b6eab1eed5226fbb6865ca4b75` — makes the save queue per-file. The commit's own message notes the save-queue half is mirrored rather than exercised in this codebase; cited as upstream design history only.  
 <https://github.com/Autonomy-Logic/openplc-editor/commit/a6999a8c7c95b5b6eab1eed5226fbb6865ca4b75>
 
 ### External design references — inspiration only
