@@ -11,6 +11,7 @@ from openplc_engineering_mcp.server import mcp
 
 
 def sha256_token(raw: bytes) -> str:
+    """Return the exact-byte sha256: token expected for raw persisted bytes."""
     return "sha256:" + hashlib.sha256(raw).hexdigest()
 
 
@@ -32,6 +33,7 @@ async def client():
 
 @pytest.mark.anyio
 async def test_server_and_tools_are_discoverable(client: Client) -> None:
+    """The server lists exactly the twelve domain tools with correct annotations."""
     assert isinstance(mcp, MCPServer)
     listed = await client.list_tools()
     tools = {tool.name: tool for tool in listed.tools}
@@ -298,6 +300,7 @@ async def test_list_datatype_errors_are_exposed_through_mcp(client: Client, tmp_
 
 @pytest.mark.anyio
 async def test_read_pou_returns_structured_content(client: Client, tmp_path: Path) -> None:
+    """read_pou() returns identity, content, and content_hash as structured content."""
     project = tmp_path / "project"
     (project / "pous" / "programs").mkdir(parents=True)
     (project / "project.json").write_text(
@@ -324,6 +327,7 @@ async def test_read_pou_returns_structured_content(client: Client, tmp_path: Pat
 
 @pytest.mark.anyio
 async def test_update_pou_schemas_match_the_public_contract(client: Client) -> None:
+    """update_pou and read_pou expose the documented input and output schemas."""
     listed = await client.list_tools()
     tool = next(tool for tool in listed.tools if tool.name == "update_pou")
 
@@ -350,6 +354,7 @@ async def test_update_pou_schemas_match_the_public_contract(client: Client) -> N
 
 @pytest.mark.anyio
 async def test_update_pou_returns_structured_content(client: Client, tmp_path: Path) -> None:
+    """update_pou returns the updated name and hash and persists the replacement."""
     project = tmp_path / "project"
     (project / "pous" / "programs").mkdir(parents=True)
     (project / "project.json").write_text(
@@ -380,6 +385,7 @@ async def test_update_pou_returns_structured_content(client: Client, tmp_path: P
 
 @pytest.mark.anyio
 async def test_update_pou_errors_are_exposed_through_mcp(client: Client, tmp_path: Path) -> None:
+    """Stale-hash update failures surface as MCP tool errors."""
     project = tmp_path / "project"
     (project / "pous" / "programs").mkdir(parents=True)
     (project / "project.json").write_text(

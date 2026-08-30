@@ -17,6 +17,7 @@ PouType = Literal["program", "function-block", "function"]
 
 
 class PouInfo(TypedDict):
+    """The public identity of one POU recognized by the current project layout."""
     name: str
     type: PouType
     language: str
@@ -24,11 +25,13 @@ class PouInfo(TypedDict):
 
 
 class PouContent(PouInfo):
+    """A readable POU's identity plus its exact source content and content hash."""
     content: str
     content_hash: str
 
 
 class UpdatePouResult(TypedDict):
+    """The name and new exact-byte content hash of an updated POU."""
     name: str
     content_hash: str
 
@@ -66,6 +69,7 @@ def _content_hash(raw: bytes) -> str:
 
 
 def _is_contained(root: Path, path: Path) -> bool:
+    """Check whether a path's resolved target stays inside the project root."""
     try:
         return path.resolve().is_relative_to(root)
     except (OSError, RuntimeError):

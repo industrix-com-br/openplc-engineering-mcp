@@ -40,6 +40,7 @@ ADD_TEN_FUNCTION = (
 
 
 def make_update_project(root: Path) -> Path:
+    """Create a minimal project with one Program, Function Block, and Function ST POU."""
     (root / "pous" / "programs").mkdir(parents=True)
     (root / "pous" / "function-blocks").mkdir(parents=True)
     (root / "pous" / "functions").mkdir(parents=True)
@@ -53,24 +54,29 @@ def make_update_project(root: Path) -> Path:
 
 
 def sha256_token(raw: bytes) -> str:
+    """Return the exact-byte sha256: token expected for raw persisted bytes."""
     return "sha256:" + hashlib.sha256(raw).hexdigest()
 
 
 def current_hash(project: Path, pou_name: str) -> str:
+    """Return the current read_pou() content hash for one POU."""
     return read_pou(str(project), pou_name)["content_hash"]
 
 
 def tree_entries(root: Path) -> list[str]:
+    """List every path under root as sorted project-relative posix strings."""
     return sorted(str(path.relative_to(root)) for path in root.rglob("*"))
 
 
 def file_snapshot(root: Path) -> dict[Path, bytes]:
+    """Map every file under root to its bytes by project-relative path."""
     return {
         path.relative_to(root): path.read_bytes() for path in root.rglob("*") if path.is_file()
     }
 
 
 def assert_tree_unchanged(root: Path, snapshot: dict[Path, bytes]) -> None:
+    """Assert the project tree still matches a previous file_snapshot()."""
     assert file_snapshot(root) == snapshot
 
 
@@ -125,6 +131,7 @@ def test_pou_names_are_deduplicated_globally(tmp_path: Path) -> None:
 
 
 def test_read_pou_returns_source_content(tmp_path: Path) -> None:
+    """read_pou() returns identity, exact source content, and the exact-byte hash."""
     project = make_project(tmp_path / "project")
 
     pou = read_pou(str(project), "Motor")
@@ -172,6 +179,7 @@ def test_invalid_project_path_is_rejected(tmp_path: Path) -> None:
 
 
 def test_read_pou_content_hash_is_a_deterministic_exact_byte_token(tmp_path: Path) -> None:
+    """Repeated reads return the same hash computed over the exact persisted bytes."""
     project = make_update_project(tmp_path / "project")
 
     first = read_pou(str(project), "MAIN")
@@ -182,6 +190,7 @@ def test_read_pou_content_hash_is_a_deterministic_exact_byte_token(tmp_path: Pat
 
 
 def test_read_pou_preserves_crlf_bytes_and_hash(tmp_path: Path) -> None:
+    """CRLF source bytes are preserved in content and covered by the hash."""
     project = make_update_project(tmp_path / "project")
     crlf = MAIN_PROGRAM.replace("\n", "\r\n")
     (project / "pous" / "programs" / "MAIN.st").write_bytes(crlf.encode("utf-8"))
@@ -193,6 +202,7 @@ def test_read_pou_preserves_crlf_bytes_and_hash(tmp_path: Path) -> None:
 
 
 def test_update_st_program_replaces_complete_content(tmp_path: Path) -> None:
+    """A Program replacement persists byte-for-byte and returns the new hash."""
     project = make_update_project(tmp_path / "project")
     replacement = "PROGRAM MAIN\nVAR\n    flag : BOOL;\nEND_VAR\n    flag := TRUE;\nEND_PROGRAM\n"
 
@@ -204,6 +214,7 @@ def test_update_st_program_replaces_complete_content(tmp_path: Path) -> None:
 
 
 def test_update_st_function_block(tmp_path: Path) -> None:
+    """A Function Block replacement persists byte-for-byte and returns the new hash."""
     project = make_update_project(tmp_path / "project")
     replacement = (
         "FUNCTION_BLOCK Motor\n"
@@ -221,6 +232,7 @@ def test_update_st_function_block(tmp_path: Path) -> None:
 
 
 def test_update_st_function(tmp_path: Path) -> None:
+    """A Function replacement persists byte-for-byte and returns the new hash."""
     project = make_update_project(tmp_path / "project")
     replacement = (
         "FUNCTION AddTen : INT\n"
@@ -238,6 +250,7 @@ def test_update_st_function(tmp_path: Path) -> None:
 
 
 def test_update_changes_function_return_type(tmp_path: Path) -> None:
+    """A Function's return type changes through the complete replacement."""
     project = make_update_project(tmp_path / "project")
     replacement = ADD_TEN_FUNCTION.replace("FUNCTION AddTen : INT", "FUNCTION AddTen : DINT")
 
@@ -247,6 +260,7 @@ def test_update_changes_function_return_type(tmp_path: Path) -> None:
 
 
 def test_update_changes_documentation(tmp_path: Path) -> None:
+    """A leading documentation block changes through the complete replacement."""
     project = make_update_project(tmp_path / "project")
     replacement = "(* Pump station control loop. *)\nPROGRAM MAIN\nEND_PROGRAM\n"
 
@@ -256,6 +270,7 @@ def test_update_changes_documentation(tmp_path: Path) -> None:
 
 
 def test_update_declaration_changes_are_visible_to_list_variables(tmp_path: Path) -> None:
+    """Declaration changes made by update_pou() are visible to list_variables()."""
     project = make_update_project(tmp_path / "project")
     replacement = (
         "FUNCTION_BLOCK Motor\n"
@@ -277,6 +292,7 @@ def test_update_declaration_changes_are_visible_to_list_variables(tmp_path: Path
 
 
 def test_read_pou_after_update_returns_replacement_and_new_hash(tmp_path: Path) -> None:
+    """read_pou() after an update returns the replacement and its hash."""
     project = make_update_project(tmp_path / "project")
     replacement = "PROGRAM MAIN\nEND_PROGRAM\n"
 
@@ -288,6 +304,7 @@ def test_read_pou_after_update_returns_replacement_and_new_hash(tmp_path: Path) 
 
 
 def test_update_writes_replacement_exactly_as_provided(tmp_path: Path) -> None:
+    """Comments, spacing, and tabs are persisted exactly as provided."""
     project = make_update_project(tmp_path / "project")
     replacement = (
         "(* keep  this   spacing *)\n"
@@ -305,6 +322,7 @@ def test_update_writes_replacement_exactly_as_provided(tmp_path: Path) -> None:
 
 
 def test_update_crlf_content_round_trips_without_normalization(tmp_path: Path) -> None:
+    """CRLF replacement bytes round-trip without newline normalization."""
     project = make_update_project(tmp_path / "project")
     crlf_original = MAIN_PROGRAM.replace("\n", "\r\n")
     (project / "pous" / "programs" / "MAIN.st").write_bytes(crlf_original.encode("utf-8"))
@@ -319,6 +337,7 @@ def test_update_crlf_content_round_trips_without_normalization(tmp_path: Path) -
 
 
 def test_update_bom_prefixed_pou_round_trips_without_stripping(tmp_path: Path) -> None:
+    """BOM-prefixed POUs round-trip through read_pou() and update_pou() with the BOM preserved."""
     project = make_update_project(tmp_path / "project")
     bom_original = "\ufeff" + MAIN_PROGRAM
     target = project / "pous" / "programs" / "MAIN.st"
@@ -341,6 +360,7 @@ def test_update_bom_prefixed_pou_round_trips_without_stripping(tmp_path: Path) -
 
 
 def test_update_bom_prefixed_pou_with_documentation(tmp_path: Path) -> None:
+    """A BOM before a leading documentation block is accepted and persisted."""
     project = make_update_project(tmp_path / "project")
     replacement = "\ufeff(* Pump station control loop. *)\nPROGRAM MAIN\nEND_PROGRAM\n"
 
@@ -350,6 +370,7 @@ def test_update_bom_prefixed_pou_with_documentation(tmp_path: Path) -> None:
 
 
 def test_update_only_touches_the_target_file(tmp_path: Path) -> None:
+    """An update changes only the target POU file and no other project file."""
     project = make_update_project(tmp_path / "project")
     snapshot = {
         path.relative_to(project): path.read_bytes()
@@ -372,6 +393,7 @@ def test_update_only_touches_the_target_file(tmp_path: Path) -> None:
 
 
 def test_noop_update_does_not_physically_replace_the_file(tmp_path: Path) -> None:
+    """A byte-identical replacement returns success without replacing the file."""
     project = make_update_project(tmp_path / "project")
     target = project / "pous" / "programs" / "MAIN.st"
     before = target.stat()
@@ -385,6 +407,7 @@ def test_noop_update_does_not_physically_replace_the_file(tmp_path: Path) -> Non
 
 
 def test_update_preserves_target_file_mode(tmp_path: Path) -> None:
+    """The target's file mode is preserved across the replacement."""
     project = make_update_project(tmp_path / "project")
     target = project / "pous" / "programs" / "MAIN.st"
     os.chmod(target, 0o600)
@@ -395,6 +418,7 @@ def test_update_preserves_target_file_mode(tmp_path: Path) -> None:
 
 
 def test_update_creates_no_backup_or_temporary_files(tmp_path: Path) -> None:
+    """A successful update leaves no backup or temporary files behind."""
     project = make_update_project(tmp_path / "project")
     before = tree_entries(project)
 
@@ -404,6 +428,7 @@ def test_update_creates_no_backup_or_temporary_files(tmp_path: Path) -> None:
 
 
 def test_update_does_not_trigger_compilation(tmp_path: Path, monkeypatch) -> None:
+    """update_pou() persists without spawning compilation subprocesses."""
     project = make_update_project(tmp_path / "project")
 
     def forbidden_run(*args, **kwargs):
@@ -418,6 +443,7 @@ def test_update_does_not_trigger_compilation(tmp_path: Path, monkeypatch) -> Non
 
 
 def test_update_rejects_changed_pou_name(tmp_path: Path) -> None:
+    """A replacement declaring a different POU name is rejected and changes nothing."""
     project = make_update_project(tmp_path / "project")
     target = project / "pous" / "programs" / "MAIN.st"
     original = target.read_bytes()
@@ -442,6 +468,7 @@ def test_update_rejects_changed_pou_name(tmp_path: Path) -> None:
 def test_update_rejects_changed_pou_type(
     tmp_path: Path, pou_name: str, replacement: str, target_type: str
 ) -> None:
+    """A replacement declaring a different POU type is rejected and changes nothing."""
     project = make_update_project(tmp_path / "project")
     snapshot = file_snapshot(project)
 
@@ -454,6 +481,7 @@ def test_update_rejects_changed_pou_type(
 
 
 def test_update_rejects_function_without_return_type(tmp_path: Path) -> None:
+    """A Function replacement without a return type is rejected and changes nothing."""
     project = make_update_project(tmp_path / "project")
     target = project / "pous" / "functions" / "AddTen.st"
     original = target.read_bytes()
@@ -475,6 +503,7 @@ def test_update_rejects_function_without_return_type(tmp_path: Path) -> None:
 def test_update_rejects_missing_terminal_keyword(
     tmp_path: Path, pou_name: str, replacement: str, terminal: str
 ) -> None:
+    """A replacement missing its END_* terminal keyword is rejected and changes nothing."""
     project = make_update_project(tmp_path / "project")
     snapshot = file_snapshot(project)
 
@@ -485,6 +514,7 @@ def test_update_rejects_missing_terminal_keyword(
 
 
 def test_update_rejects_unknown_pou(tmp_path: Path) -> None:
+    """Updating an unknown POU name is rejected and changes nothing."""
     project = make_update_project(tmp_path / "project")
     snapshot = file_snapshot(project)
 
@@ -500,6 +530,7 @@ def test_update_rejects_unknown_pou(tmp_path: Path) -> None:
 
 
 def test_update_rejects_ambiguous_duplicate_stem(tmp_path: Path) -> None:
+    """A stem claimed by multiple recognized sources is rejected as ambiguous."""
     project = make_update_project(tmp_path / "project")
     duplicate = project / "pous" / "programs" / "Motor.st"
     duplicate.write_text("PROGRAM Motor\nEND_PROGRAM\n", encoding="utf-8")
@@ -531,6 +562,7 @@ def test_update_rejects_ambiguous_duplicate_stem(tmp_path: Path) -> None:
     ],
 )
 def test_update_rejects_unsupported_languages(tmp_path: Path, suffix: str, language: str) -> None:
+    """Non-ST POU sources are rejected for update with their bytes unchanged."""
     project = make_update_project(tmp_path / "project")
     target = project / "pous" / "function-blocks" / f"Legacy{suffix}"
     target.write_bytes(b"original legacy body")
@@ -550,6 +582,7 @@ def test_update_rejects_unsupported_languages(tmp_path: Path, suffix: str, langu
 
 
 def test_update_still_reads_unsupported_language_pous(tmp_path: Path) -> None:
+    """Non-ST POU sources remain readable through read_pou()."""
     project = make_update_project(tmp_path / "project")
     (project / "pous" / "function-blocks" / "Legacy.ld").write_text(
         '{"name": "Legacy", "rungs": []}', encoding="utf-8"
@@ -575,6 +608,7 @@ def test_update_still_reads_unsupported_language_pous(tmp_path: Path) -> None:
     ],
 )
 def test_update_rejects_malformed_expected_hash(tmp_path: Path, expected_hash: str) -> None:
+    """Malformed expected content hashes are rejected and change nothing."""
     project = make_update_project(tmp_path / "project")
     target = project / "pous" / "programs" / "MAIN.st"
     original = target.read_bytes()
@@ -586,6 +620,7 @@ def test_update_rejects_malformed_expected_hash(tmp_path: Path, expected_hash: s
 
 
 def test_update_rejects_stale_hash_and_preserves_external_bytes(tmp_path: Path) -> None:
+    """A stale hash rejects the update and preserves externally written bytes."""
     project = make_update_project(tmp_path / "project")
     pou = read_pou(str(project), "MAIN")
     external_bytes = b"PROGRAM MAIN\n    (* written by another process *)\nEND_PROGRAM\n"
@@ -598,6 +633,7 @@ def test_update_rejects_stale_hash_and_preserves_external_bytes(tmp_path: Path) 
 
 
 def test_update_rejects_modification_between_hash_checks(tmp_path: Path, monkeypatch) -> None:
+    """A modification between the first and final hash checks rejects the update."""
     project = make_update_project(tmp_path / "project")
     target = project / "pous" / "programs" / "MAIN.st"
     pou = read_pou(str(project), "MAIN")
@@ -620,6 +656,7 @@ def test_update_rejects_modification_between_hash_checks(tmp_path: Path, monkeyp
 
 
 def test_update_rejects_empty_pou_name(tmp_path: Path) -> None:
+    """An empty POU name is rejected."""
     project = make_update_project(tmp_path / "project")
 
     with pytest.raises(ToolError, match="pou_name must not be empty"):
@@ -627,6 +664,7 @@ def test_update_rejects_empty_pou_name(tmp_path: Path) -> None:
 
 
 def test_update_rejects_empty_replacement_content(tmp_path: Path) -> None:
+    """Whitespace-only replacement content is rejected and changes nothing."""
     project = make_update_project(tmp_path / "project")
     target = project / "pous" / "programs" / "MAIN.st"
     original = target.read_bytes()
@@ -638,6 +676,7 @@ def test_update_rejects_empty_replacement_content(tmp_path: Path) -> None:
 
 
 def test_update_rejects_non_utf8_encodable_replacement(tmp_path: Path) -> None:
+    """Non-UTF-8-encodable replacement content is rejected and changes nothing."""
     project = make_update_project(tmp_path / "project")
     target = project / "pous" / "programs" / "MAIN.st"
     original = target.read_bytes()
@@ -649,6 +688,7 @@ def test_update_rejects_non_utf8_encodable_replacement(tmp_path: Path) -> None:
 
 
 def test_update_rejects_project_path_outside_a_project(tmp_path: Path) -> None:
+    """A project path that does not exist is rejected."""
     with pytest.raises(ToolError, match="does not exist"):
         update_pou(
             str(tmp_path / "missing"), "MAIN", "PROGRAM MAIN\nEND_PROGRAM\n", "sha256:" + "a" * 64
@@ -656,6 +696,7 @@ def test_update_rejects_project_path_outside_a_project(tmp_path: Path) -> None:
 
 
 def test_malformed_existing_pou_can_be_repaired(tmp_path: Path) -> None:
+    """A malformed existing ST POU can be repaired via exact-hash replacement."""
     project = make_update_project(tmp_path / "project")
     target = project / "pous" / "programs" / "MAIN.st"
     target.write_text("garbage {{{ not parseable as a POU", encoding="utf-8")
@@ -669,6 +710,7 @@ def test_malformed_existing_pou_can_be_repaired(tmp_path: Path) -> None:
 
 
 def test_update_rejects_symlink_target_inside_the_project(tmp_path: Path) -> None:
+    """A symlinked POU target inside the project is rejected for update."""
     project = make_update_project(tmp_path / "project")
     real_target = project / "pous" / "programs" / "MAIN.st"
     alias = project / "pous" / "programs" / "Alias.st"
@@ -684,6 +726,7 @@ def test_update_rejects_symlink_target_inside_the_project(tmp_path: Path) -> Non
 
 
 def test_update_rejects_pou_resolving_outside_the_project(tmp_path: Path) -> None:
+    """A POU source resolving outside the project root is not updatable."""
     external_dir = tmp_path / "external"
     external_dir.mkdir()
     external_pou = external_dir / "Only.st"
@@ -708,6 +751,7 @@ def test_update_rejects_pou_resolving_outside_the_project(tmp_path: Path) -> Non
 
 
 def test_update_rejects_target_removed_before_final_check(tmp_path: Path, monkeypatch) -> None:
+    """A target removed before the final check rejects the update without litter."""
     project = make_update_project(tmp_path / "project")
     target = project / "pous" / "programs" / "MAIN.st"
     pou = read_pou(str(project), "MAIN")
@@ -729,6 +773,7 @@ def test_update_rejects_target_removed_before_final_check(tmp_path: Path, monkey
 def test_update_rejects_target_replaced_by_directory_before_final_check(
     tmp_path: Path, monkeypatch
 ) -> None:
+    """A target replaced by a directory before the final check rejects the update."""
     project = make_update_project(tmp_path / "project")
     target = project / "pous" / "programs" / "MAIN.st"
     pou = read_pou(str(project), "MAIN")
@@ -752,6 +797,7 @@ def test_update_rejects_target_replaced_by_directory_before_final_check(
 
 
 def test_update_temp_creation_failure_leaves_target_unchanged(tmp_path: Path, monkeypatch) -> None:
+    """A temp-file creation failure leaves the target unchanged with no litter."""
     project = make_update_project(tmp_path / "project")
     target = project / "pous" / "programs" / "MAIN.st"
     original = target.read_bytes()
@@ -770,6 +816,7 @@ def test_update_temp_creation_failure_leaves_target_unchanged(tmp_path: Path, mo
 
 
 def test_update_temp_write_failure_leaves_target_unchanged(tmp_path: Path, monkeypatch) -> None:
+    """A temp-file write failure leaves the target unchanged with no litter."""
     project = make_update_project(tmp_path / "project")
     target = project / "pous" / "programs" / "MAIN.st"
     original = target.read_bytes()
@@ -791,6 +838,7 @@ def test_update_temp_write_failure_leaves_target_unchanged(tmp_path: Path, monke
 
 
 def test_update_fsync_failure_leaves_target_unchanged(tmp_path: Path, monkeypatch) -> None:
+    """An fsync failure leaves the target unchanged with no litter."""
     project = make_update_project(tmp_path / "project")
     target = project / "pous" / "programs" / "MAIN.st"
     original = target.read_bytes()
@@ -809,6 +857,7 @@ def test_update_fsync_failure_leaves_target_unchanged(tmp_path: Path, monkeypatc
 
 
 def test_update_replace_failure_leaves_target_unchanged(tmp_path: Path, monkeypatch) -> None:
+    """A final os.replace() failure leaves the target unchanged with no litter."""
     project = make_update_project(tmp_path / "project")
     target = project / "pous" / "programs" / "MAIN.st"
     original = target.read_bytes()
