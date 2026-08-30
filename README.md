@@ -1,6 +1,6 @@
 # openplc-engineering-mcp
 
-A small experimental Python MCP server that exposes domain-oriented engineering operations for OpenPLC.
+A small experimental Python MCP server that exposes domain-oriented engineering operations for the [OpenPLC Editor](https://github.com/Autonomy-Logic/openplc-editor) project.
 
 The project uses the official Model Context Protocol Python SDK and stdio transport. Inspection tools are read-only; compilation is delegated to the authoritative `openplc-cli`.
 
