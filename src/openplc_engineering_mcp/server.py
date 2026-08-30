@@ -12,6 +12,8 @@ from openplc_engineering_mcp.openplc.execution import ExecutionConfiguration
 from openplc_engineering_mcp.openplc.execution import (
     get_execution_configuration as inspect_execution_configuration,
 )
+from openplc_engineering_mcp.openplc.io import IOConfiguration
+from openplc_engineering_mcp.openplc.io import get_io_configuration as inspect_io_configuration
 from openplc_engineering_mcp.openplc.pous import PouContent, PouInfo
 from openplc_engineering_mcp.openplc.pous import list_pous as inspect_pous
 from openplc_engineering_mcp.openplc.pous import read_pou as inspect_pou
@@ -49,6 +51,12 @@ def list_datatypes(project_path: str) -> list[DataTypeInfo]:
 def get_execution_configuration(project_path: str) -> ExecutionConfiguration:
     """Return the execution tasks and program instances of an OpenPLC project."""
     return inspect_execution_configuration(project_path)
+
+
+@mcp.tool(annotations=_READ_ONLY)
+def get_io_configuration(project_path: str) -> IOConfiguration:
+    """Return the selected device board and its active physical I/O mapping."""
+    return inspect_io_configuration(project_path)
 
 
 @mcp.tool(annotations=_READ_ONLY)

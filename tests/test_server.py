@@ -34,6 +34,7 @@ async def test_server_and_tools_are_discoverable(client: Client) -> None:
         "compile_project",
         "get_diagnostics",
         "get_execution_configuration",
+        "get_io_configuration",
         "get_project_structure",
         "list_datatypes",
         "list_global_variables",
@@ -53,6 +54,9 @@ async def test_server_and_tools_are_discoverable(client: Client) -> None:
     assert tools["get_execution_configuration"].annotations
     assert tools["get_execution_configuration"].annotations.read_only_hint is True
     assert tools["get_execution_configuration"].annotations.open_world_hint is False
+    assert tools["get_io_configuration"].annotations
+    assert tools["get_io_configuration"].annotations.read_only_hint is True
+    assert tools["get_io_configuration"].annotations.open_world_hint is False
     assert tools["list_variables"].annotations
     assert tools["list_variables"].annotations.read_only_hint is True
     assert tools["list_variables"].annotations.open_world_hint is False
@@ -161,6 +165,81 @@ async def test_execution_configuration_errors_are_exposed_through_mcp(
 
     assert result.is_error
     assert "execution tasks must be an array" in tool_text(result)
+
+
+@pytest.mark.anyio
+async def test_io_configuration_returns_structured_content(client: Client, tmp_path: Path) -> None:
+    project = tmp_path / "project"
+    devices = project / "devices"
+    devices.mkdir(parents=True)
+    (project / "project.json").write_text(
+        json.dumps({"meta": {"name": "Minimal", "type": "plc-project"}}), encoding="utf-8"
+    )
+    (devices / "configuration.json").write_text(
+        json.dumps({"deviceBoard": "Arduino Uno"}), encoding="utf-8"
+    )
+    (devices / "pin-mapping.json").write_text(
+        json.dumps(
+            {
+                "Arduino Uno": [
+                    {
+                        "pin": "2",
+                        "pinType": "digitalInput",
+                        "address": "%IX0.0",
+                        "alias": "StartButton",
+                    }
+                ]
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    result = await client.call_tool("get_io_configuration", {"project_path": str(project)})
+
+    assert not result.is_error
+    assert result.structured_content == {
+        "device_board": "Arduino Uno",
+        "io_points": [
+            {
+                "pin": "2",
+                "pin_type": "digitalInput",
+                "address": "%IX0.0",
+                "alias": "StartButton",
+            }
+        ],
+    }
+
+
+@pytest.mark.anyio
+async def test_io_configuration_errors_are_exposed_through_mcp(
+    client: Client, tmp_path: Path
+) -> None:
+    project = tmp_path / "project"
+    devices = project / "devices"
+    devices.mkdir(parents=True)
+    (project / "project.json").write_text(
+        json.dumps({"meta": {"name": "Minimal", "type": "plc-project"}}), encoding="utf-8"
+    )
+    (devices / "configuration.json").write_text(
+        json.dumps({"deviceBoard": "Arduino Uno"}), encoding="utf-8"
+    )
+    (devices / "pin-mapping.json").write_text(
+        json.dumps(
+            [
+                {
+                    "pin": "2",
+                    "pinType": "digitalInput",
+                    "address": "%IX0.0",
+                }
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+    result = await client.call_tool("get_io_configuration", {"project_path": str(project)})
+
+    assert result.is_error
+    assert "Unsupported OpenPLC project format" in tool_text(result)
 
 
 @pytest.mark.anyio
