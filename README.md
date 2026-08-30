@@ -29,6 +29,7 @@ uv run pytest
 - `list_pous`
 - `list_datatypes`
 - `get_execution_configuration`
+- `get_io_configuration`
 - `read_pou`
 - `list_variables`
 - `list_global_variables`
@@ -55,6 +56,6 @@ See [`docs/openplc-projects.md`](docs/openplc-projects.md) for the detailed comp
 
 ## Scope
 
-The current version focuses on project, execution-configuration, POU, data-type, and variable inspection and shallow project validation, plus compilation delegated to `openplc-cli`. Project modification, data-type modification, variable modification, deployment, runtime control, variable forcing, authentication, HTTP transport, and generic shell/filesystem tools are not implemented.
+The current version focuses on project, execution-configuration, physical I/O, POU, data-type, and variable inspection and shallow project validation, plus compilation delegated to `openplc-cli`. Project modification, data-type modification, variable modification, deployment, runtime control, variable forcing, authentication, HTTP transport, and generic shell/filesystem tools are not implemented.
 
 See [`docs/scope.md`](docs/scope.md) for the current boundary.

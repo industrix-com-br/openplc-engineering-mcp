@@ -146,6 +146,36 @@ A project with no execution configuration returns empty Task and Program Instanc
 
 `globalVariables` is physically adjacent to Tasks and Instances but is outside this inspection operation; it is exposed by `list_global_variables()`.
 
+## Physical I/O configuration
+
+The current OpenPLC Editor persists the selected board and local pin mappings in separate device files:
+
+```text
+devices/configuration.json  -> deviceBoard
+devices/pin-mapping.json    -> Record<deviceBoard, DevicePin[]>
+```
+
+The per-board object is the canonical `pin-mapping.json` representation. OpenPLC still accepts a historical flat `DevicePin[]` on load and migrates it into the active board's bucket on save, but the MCP intentionally does not reproduce that migration path.
+
+A current `DevicePin` contains:
+
+```text
+pin: string
+pinType: digitalInput | digitalOutput | analogInput | analogOutput
+address: string
+alias?: string
+```
+
+`get_io_configuration()` in `openplc/io.py` reads `deviceBoard`, validates the complete canonical per-board mapping, and returns only the array stored under the active board key. Mapping arrays for other boards are retained editor state and do not describe the currently selected target.
+
+The MCP preserves each active mapping's stored order, physical `pin`, and IEC `address` string. It maps `pinType` to the public `pin_type` field and returns a missing optional alias as `null`. It does not parse or normalize the complete IEC address grammar.
+
+When `devices/configuration.json` is absent, the MCP follows the current OpenPLC schema default of `OpenPLC Simulator`. A missing `devices/pin-mapping.json`, an empty mapping object, or an active board with no mapping is a valid empty I/O configuration. Existing but malformed JSON or malformed current-format device structures are tool errors rather than defaults, because returning a partial or silently repaired engineering view would be misleading through MCP.
+
+The OpenPLC Editor's schema still contains two compatibility behaviors that are intentionally not part of the MCP contract: the flat pin array and the old per-pin `name` field that is migrated to `alias`. Encountering either representation causes `get_io_configuration()` to report an unsupported project format.
+
+Vendor Plugin Package configuration is separate. OpenPLC can compile arbitrary `DeviceConfiguration.vendorScreenData` into vendor-specific firmware configuration for boards with VPP I/O support. That blob is not a stable `DevicePin` representation and may contain board-specific module or screen state, so this MCP tool does not expose or reinterpret it. Communication settings, remote devices, protocol configuration, live I/O state, and variable-to-alias resolution are likewise separate concepts.
+
 ## Resource global variables
 
 `list_global_variables()` in `openplc/variables.py` reads only the resource-level global variables stored under:

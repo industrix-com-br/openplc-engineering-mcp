@@ -2,12 +2,13 @@
 
 ## Current implementation
 
-The project is an early experimental MCP server for local OpenPLC engineering operations. It currently exposes ten tools:
+The project is an early experimental MCP server for local OpenPLC engineering operations. It currently exposes eleven tools:
 
 - `get_project_structure` — inspect recognized project files;
 - `list_pous` — discover Programs, Function Blocks, and Functions;
 - `list_datatypes` — inspect project-defined enumerated, structure, and array data types;
 - `get_execution_configuration` — inspect configured Tasks and Program Instances;
+- `get_io_configuration` — inspect the selected device board and its active local physical I/O mapping;
 - `read_pou` — read a POU by domain name;
 - `list_variables` — inspect variables declared by a POU;
 - `list_global_variables` — inspect the project's resource-level global variables;
@@ -15,7 +16,7 @@ The project is an early experimental MCP server for local OpenPLC engineering op
 - `compile_project` — compile through `openplc-cli`;
 - `get_diagnostics` — return `stderr` diagnostics captured from the latest compilation in the current server process.
 
-Project, execution-configuration, data-type, POU, variable, and diagnostic inspection is read-only. Compilation is the only local write-capable operation and is delegated to the authoritative `openplc-cli`.
+Project, execution-configuration, physical-I/O, data-type, POU, variable, and diagnostic inspection is read-only. Compilation is the only local write-capable operation and is delegated to the authoritative `openplc-cli`.
 
 ## Project format
 
@@ -26,13 +27,16 @@ Supported:
 - current OpenPLC Editor projects;
 - current POU source files under `pous/`;
 - current `data.configuration` execution/resource representation;
-- current `datatypes/*.dt` project-defined data types.
+- current `datatypes/*.dt` project-defined data types;
+- current `devices/configuration.json` board selection;
+- current per-board `devices/pin-mapping.json` local physical I/O mappings.
 
 Intentionally unsupported:
 
 - legacy OpenPLC project formats;
 - historical JSON POU representations;
 - historical project representations such as `data.configurations` and embedded `data.dataTypes` data-type definitions;
+- historical flat pin-mapping arrays and legacy pin `name` fields;
 - automatic migration or backward-compatibility parsing.
 
 The MCP does not detect, convert, or normalize historical project versions. A legacy representation may be ignored when it is outside a tool's recognized current layout or rejected when it would otherwise make the result ambiguous.
@@ -58,6 +62,7 @@ The implementation currently covers:
 - basic `project.json` metadata preconditions;
 - recognized project-file inspection;
 - configured execution Tasks and Program Instances;
+- selected device board and active local `DevicePin` mapping inspection;
 - project-defined data-type inspection from `datatypes/*.dt` files;
 - POU discovery;
 - POU content reading;
@@ -76,10 +81,13 @@ The current server does not provide:
 - built-in IEC or OpenPLC library data-type discovery;
 - variable creation or modification;
 - project-wide variable or reference search;
+- vendor-specific VPP configuration inspection or reinterpretation;
+- communication configuration or protocol-specific device inspection;
+- remote-device inspection;
 - deployment or upload;
 - controller start/stop;
 - runtime or debug sessions;
-- live runtime execution state;
+- live runtime execution or I/O state;
 - runtime variable reads;
 - variable forcing or releasing;
 - dependency analysis;

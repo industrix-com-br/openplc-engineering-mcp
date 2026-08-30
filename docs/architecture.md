@@ -13,6 +13,8 @@ OpenPLC Engineering MCP
         |
         +-- execution.py --- execution configuration in project.json
         |
+        +-- io.py ---------- active device board and local physical I/O mapping
+        |
         +-- pous.py -------- current OpenPLC POU source files
         |
         +-- variables.py --- POU and resource global variable declarations
@@ -40,7 +42,7 @@ The server provides a small domain-oriented interface between an MCP-compatible 
 Responsible for:
 
 - creating the `MCPServer`;
-- registering the ten public MCP tools;
+- registering the eleven public MCP tools;
 - applying tool annotations;
 - exposing the package entry point;
 - starting the stdio server.
@@ -68,6 +70,19 @@ Responsible for configured execution-model inspection:
 - validating the Task and Program Instance fields required by the public contract;
 - preserving cyclic IEC interval strings while returning no interval for interrupt Tasks;
 - returning only Tasks and Program Instances, not neighboring configuration data.
+
+### `openplc/io.py`
+
+Responsible for configured local physical I/O inspection:
+
+- applying the shared project-loading preconditions;
+- reading the selected `deviceBoard` from the current device configuration;
+- reading and validating the canonical per-board `DevicePin` mapping;
+- returning only the active board's `pin`, `pin_type`, `address`, and optional `alias`;
+- rejecting historical pin-mapping representations instead of migrating them;
+- keeping communication settings, VPP vendor data, variables, and runtime state outside the contract.
+
+The module is deliberately a focused device-I/O reader rather than a generic JSON or device service layer.
 
 ### `openplc/pous.py`
 
@@ -118,19 +133,21 @@ A separate CLI abstraction is not needed while compilation is the only feature t
 server.py
    ├── openplc.project
    ├── openplc.execution
+   ├── openplc.io
    ├── openplc.pous
    ├── openplc.variables
    ├── openplc.datatypes
    └── openplc.compiler
 
 openplc.execution ─► openplc.project
+openplc.io ─────────► openplc.project
 openplc.pous ──────► openplc.project
 openplc.variables ─► openplc.pous, openplc.project
 openplc.datatypes ─► openplc.project
 openplc.compiler ──► openplc.project
 ```
 
-`project.py` does not depend on the execution, POU, variable, data-type, or compiler modules. It is the shared lower-level dependency for local project loading, current configuration-resource lookup, and recognized source-file discovery.
+`project.py` does not depend on the execution, I/O, POU, variable, data-type, or compiler modules. It is the shared lower-level dependency for local project loading, current configuration-resource lookup, and recognized source-file discovery.
 
 There are no service, repository, adapter, client, project-version resolver, or one-file-per-tool layers.
 

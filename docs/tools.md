@@ -1,6 +1,6 @@
 # MCP tools
 
-The current server registers exactly ten domain-oriented tools. All tools use `open_world_hint: false`. Inspection and diagnostics tools are read-only; `compile_project` is registered with `read_only_hint: false` because the OpenPLC CLI may write local build artifacts.
+The current server registers exactly eleven domain-oriented tools. All tools use `open_world_hint: false`. Inspection and diagnostics tools are read-only; `compile_project` is registered with `read_only_hint: false` because the OpenPLC CLI may write local build artifacts.
 
 The public registrations live in `src/openplc_engineering_mcp/server.py`. OpenPLC behavior is grouped by responsibility under `src/openplc_engineering_mcp/openplc/`.
 
@@ -12,6 +12,7 @@ All project-inspection tools target the **current OpenPLC Editor project format 
 | `list_pous` | yes | Discover Programs, Function Blocks, and Functions |
 | `list_datatypes` | yes | Inspect project-defined enumerated, structure, and array data types |
 | `get_execution_configuration` | yes | Inspect configured Tasks and Program Instances |
+| `get_io_configuration` | yes | Inspect the selected device board and its active local physical I/O mapping |
 | `read_pou` | yes | Read a POU by domain name without requiring its filesystem path |
 | `list_variables` | yes | Inspect variables declared by a POU |
 | `list_global_variables` | yes | Inspect the project's resource-level global variables |
@@ -140,6 +141,49 @@ Each Program Instance contains its name, Task reference, and Program reference e
 A project with no execution configuration returns empty lists. Malformed current-format Task or Program Instance structures are MCP tool errors. The historical `data.configurations` representation is unsupported.
 
 This tool reports the configured project model, not live runtime execution state.
+
+## `get_io_configuration`
+
+Input:
+
+- `project_path: str`.
+
+Returns the currently selected device board and only that board's current-format local pin mapping:
+
+```json
+{
+  "device_board": "Arduino Uno",
+  "io_points": [
+    {
+      "pin": "2",
+      "pin_type": "digitalInput",
+      "address": "%IX0.0",
+      "alias": "StartButton"
+    },
+    {
+      "pin": "13",
+      "pin_type": "digitalOutput",
+      "address": "%QX0.0",
+      "alias": null
+    }
+  ]
+}
+```
+
+The authoritative current-format sources are `devices/configuration.json` for `deviceBoard` and the per-board object in `devices/pin-mapping.json` for `DevicePin` mappings. Mapping entries for inactive boards are editor state and are not returned.
+
+Each I/O point contains only:
+
+- `pin` — physical pin identifier as stored;
+- `pin_type` — `digitalInput`, `digitalOutput`, `analogInput`, or `analogOutput`;
+- `address` — IEC address string as stored, without grammar revalidation or normalization;
+- `alias` — stored alias, or `null` when the optional alias is absent.
+
+Stored I/O point order is preserved. A missing pin-mapping file, an empty mapping, or an active board with no mapping returns an empty `io_points` list. When `devices/configuration.json` is absent, the tool follows the current OpenPLC default board, `OpenPLC Simulator`.
+
+Malformed device JSON, invalid current-format structures, or malformed pin entries are tool errors. The MCP validates the complete per-board mapping file before returning the active subset, so malformed inactive-board data is not silently ignored. The historical flat pin array and legacy pin `name` field are intentionally unsupported rather than migrated.
+
+The operation is available only for `plc-project` projects. It does not inspect PLC variables, resolve variable-to-alias references, inspect POU source, return communication settings, expose `vendorScreenData`, inspect remote devices or protocol configuration, or report live runtime I/O state. Vendor-specific VPP configuration remains outside this stable `DevicePin` contract.
 
 ## `read_pou`
 
