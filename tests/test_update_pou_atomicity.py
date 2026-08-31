@@ -4,9 +4,9 @@ from pathlib import Path
 
 import pytest
 from mcp.server.mcpserver.exceptions import ToolError
+
 from openplc_engineering_mcp.openplc import pous as pous_module
 from openplc_engineering_mcp.openplc.pous import read_pou, update_pou
-
 
 ORIGINAL = "PROGRAM MAIN\nEND_PROGRAM\n"
 REPLACEMENT = "PROGRAM MAIN\nVAR\n    flag : BOOL;\nEND_VAR\n    flag := TRUE;\nEND_PROGRAM\n"
