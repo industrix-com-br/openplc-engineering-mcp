@@ -192,7 +192,7 @@ def _write_pou_atomically(
     replacement_raw: bytes,
     expected_content_hash: str,
 ) -> None:
-    """Replace one POU file through a same-directory temporary file."""
+    """Stage complete bytes beside the target and atomically replace the POU."""
     try:
         original_mode = stat.S_IMODE(lexical_target.stat().st_mode)
     except OSError as exc:
@@ -211,8 +211,8 @@ def _write_pou_atomically(
             with os.fdopen(fd, "wb") as temp_file:
                 temp_file.write(replacement_raw)
                 temp_file.flush()
+                os.chmod(temp_path, original_mode)
                 os.fsync(temp_file.fileno())
-            os.chmod(temp_path, original_mode)
         except OSError as exc:
             raise ToolError(f'Could not update POU "{pou_name}": {exc}') from exc
 
@@ -247,7 +247,8 @@ def update_pou(
 
     The POU name, type, language, and canonical path are immutable. The expected
     content hash must match the exact bytes returned by read_pou() so stale
-    updates are rejected. Compilation remains a separate operation.
+    updates are rejected. Success means the complete replacement was atomically
+    persisted; compilation remains an explicit, separate operation.
 
     Raises:
         ToolError: If the project, POU identity, concurrency token, replacement
