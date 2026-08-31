@@ -5,7 +5,7 @@ from pathlib import Path
 import pytest
 from mcp.server.mcpserver.exceptions import ToolError
 
-import openplc_engineering_mcp.openplc.pous as pous_module
+from openplc_engineering_mcp.openplc import pous as pous_module
 from openplc_engineering_mcp.openplc.pous import read_pou, update_pou
 
 
