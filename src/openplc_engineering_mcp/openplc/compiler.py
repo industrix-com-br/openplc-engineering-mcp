@@ -1,6 +1,7 @@
 """OpenPLC CLI compilation and process-local diagnostics."""
 
 import json
+import re
 import subprocess
 from typing import TypedDict
 
@@ -13,6 +14,18 @@ class CompileResult(TypedDict):
     success: bool
     exit_code: int
     output: object | None
+
+
+_CHROMIUM_LOG_LINE = re.compile(r"^\[\d+(?::\d+)?:\d+/\d+\.\d+:[A-Z]+:")
+
+
+def _is_platform_noise(line: str) -> bool:
+    """Electron platform logs and user-data scaffolding reach stderr without being compile diagnostics."""
+    return (
+        _CHROMIUM_LOG_LINE.match(line) is not None
+        or line.startswith("File already exists at ")
+        or line == "Skipping creation."
+    )
 
 
 _LAST_DIAGNOSTICS: dict[str, list[str]] = {}
@@ -34,7 +47,11 @@ def compile_project(project_path: str) -> CompileResult:
     except OSError as exc:
         raise ToolError(f"Could not run openplc-cli: {exc}") from exc
 
-    _LAST_DIAGNOSTICS[str(root)] = [line.strip() for line in result.stderr.splitlines() if line.strip()]
+    _LAST_DIAGNOSTICS[str(root)] = [
+        stripped
+        for line in result.stderr.splitlines()
+        if (stripped := line.strip()) and not _is_platform_noise(stripped)
+    ]
 
     output: object | None = None
     if result.stdout.strip():

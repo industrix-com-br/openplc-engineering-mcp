@@ -299,4 +299,4 @@ openplc-cli compile <resolved-project-path> --json
 
 The MCP does not reproduce compilation semantics. The CLI remains authoritative for compilation, and `success` reflects only whether the CLI exited with status `0`.
 
-CLI `stdout` is parsed as JSON when non-empty. Non-empty `stderr` lines are retained in memory for `get_diagnostics()`. See [`tools.md`](tools.md) for the public compilation and diagnostics contracts.
+CLI `stdout` is parsed as JSON when non-empty. Non-empty `stderr` lines are retained in memory for `get_diagnostics()`, except Electron platform-log lines and user-data scaffolding notices, which are not compile diagnostics. See [`tools.md`](tools.md) for the public compilation and diagnostics contracts.

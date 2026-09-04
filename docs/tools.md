@@ -367,7 +367,7 @@ It returns:
 
 The command must be available as `openplc-cli` on `PATH`. A missing executable, an OS error while starting the process, or non-JSON non-empty `stdout` is exposed as an MCP tool error.
 
-Non-empty lines from CLI `stderr` are captured as diagnostics for [`get_diagnostics`](#get_diagnostics).
+Non-empty lines from CLI `stderr` are captured as diagnostics for [`get_diagnostics`](#get_diagnostics), except Electron platform-log lines (the `[pid:date/time:LEVEL:file(line)]` Chromium format) and the editor's user-data scaffolding notices (`File already exists at ...` / `Skipping creation.`), which reach `stderr` on every run without being compile diagnostics.
 
 ## `get_diagnostics`
 
@@ -375,7 +375,7 @@ Input:
 
 - `project_path: str`
 
-Returns the `stderr` lines captured from the project's most recent `compile_project` call.
+Returns the `stderr` lines captured from the project's most recent `compile_project` call, with Electron platform-log and scaffolding noise excluded (see [`compile_project`](#compile_project)).
 
 Diagnostics are intentionally process-local:
 
