@@ -16,16 +16,20 @@ class CompileResult(TypedDict):
     output: object | None
 
 
-_CHROMIUM_LOG_LINE = re.compile(r"^\[\d+(?::\d+)?:\d+/\d+\.\d+:[A-Z]+:")
+_CHROMIUM_LOG_LINE = re.compile(r"^\[\d+(?::\d+)?:\d+/\d+\.\d+:([A-Z]+):([^(\]]+)\(\d+\)]")
+
+_BENIGN_CHROMIUM_SOURCES = frozenset({"bus.cc", "object_proxy.cc"})
 
 
 def _is_platform_noise(line: str) -> bool:
-    """Electron platform logs and user-data scaffolding reach stderr without being compile diagnostics."""
-    return (
-        _CHROMIUM_LOG_LINE.match(line) is not None
-        or line.startswith("File already exists at ")
-        or line == "Skipping creation."
-    )
+    """Known-benign Electron noise reaches stderr without being compile diagnostics."""
+    if line.startswith("File already exists at ") or line == "Skipping creation.":
+        return True
+    match = _CHROMIUM_LOG_LINE.match(line)
+    if match is None:
+        return False
+    level, source = match.group(1), match.group(2)
+    return level != "FATAL" and source in _BENIGN_CHROMIUM_SOURCES
 
 
 _LAST_DIAGNOSTICS: dict[str, list[str]] = {}

@@ -64,6 +64,31 @@ def test_compile_project_diagnostics_exclude_platform_noise(tmp_path: Path, monk
     assert get_diagnostics(str(project)) == ["main.st:1: error: undeclared variable"]
 
 
+def test_compile_project_diagnostics_preserve_genuine_platform_failures(tmp_path: Path, monkeypatch) -> None:
+    project = make_project(tmp_path / "project")
+    fatal_line = (
+        "[165795:0904/202137.665319:FATAL:setuid_sandbox_host.cc(163)]"
+        " The SUID sandbox helper binary was found, but is not configured correctly"
+    )
+    unknown_source_line = (
+        "[165795:0904/202137.665428:ERROR:gpu_init.cc(102)] GPU process isn't usable. Goodbye."
+    )
+
+    def fake_run(args, **kwargs):
+        stderr = "\n".join([fatal_line, unknown_source_line, "main.st:1: error: undeclared variable"])
+        return subprocess.CompletedProcess(args, 4, stdout="", stderr=stderr)
+
+    monkeypatch.setattr("openplc_engineering_mcp.openplc.compiler.subprocess.run", fake_run)
+
+    compile_project(str(project))
+
+    assert get_diagnostics(str(project)) == [
+        fatal_line,
+        unknown_source_line,
+        "main.st:1: error: undeclared variable",
+    ]
+
+
 def test_compile_project_reports_missing_cli(tmp_path: Path, monkeypatch) -> None:
     project = make_project(tmp_path / "project")
 
