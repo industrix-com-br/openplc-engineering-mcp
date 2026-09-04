@@ -1,6 +1,7 @@
 """OpenPLC CLI compilation and process-local diagnostics."""
 
 import json
+import re
 import subprocess
 from typing import TypedDict
 
@@ -13,6 +14,22 @@ class CompileResult(TypedDict):
     success: bool
     exit_code: int
     output: object | None
+
+
+_CHROMIUM_LOG_LINE = re.compile(r"^\[\d+(?::\d+)?:\d+/\d+\.\d+:([A-Z]+):([^(\]]+)\(\d+\)]")
+
+_BENIGN_CHROMIUM_SOURCES = frozenset({"bus.cc", "object_proxy.cc"})
+
+
+def _is_platform_noise(line: str) -> bool:
+    """Known-benign Electron noise reaches stderr without being compile diagnostics."""
+    if line.startswith("File already exists at ") or line == "Skipping creation.":
+        return True
+    match = _CHROMIUM_LOG_LINE.match(line)
+    if match is None:
+        return False
+    level, source = match.group(1), match.group(2)
+    return level != "FATAL" and source in _BENIGN_CHROMIUM_SOURCES
 
 
 _LAST_DIAGNOSTICS: dict[str, list[str]] = {}
@@ -34,7 +51,11 @@ def compile_project(project_path: str) -> CompileResult:
     except OSError as exc:
         raise ToolError(f"Could not run openplc-cli: {exc}") from exc
 
-    _LAST_DIAGNOSTICS[str(root)] = [line.strip() for line in result.stderr.splitlines() if line.strip()]
+    _LAST_DIAGNOSTICS[str(root)] = [
+        stripped
+        for line in result.stderr.splitlines()
+        if (stripped := line.strip()) and not _is_platform_noise(stripped)
+    ]
 
     output: object | None = None
     if result.stdout.strip():
