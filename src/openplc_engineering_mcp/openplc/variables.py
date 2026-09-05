@@ -39,17 +39,18 @@ _BLOCK_START_RE = re.compile(
 )
 _END_VAR_RE = re.compile(r"^\s*END_VAR\b", re.IGNORECASE)
 _POU_END_RE = re.compile(r"^\s*END_(PROGRAM|FUNCTION_BLOCK|FUNCTION)\b", re.IGNORECASE)
+_COMMENT_START = "(*"
+_COMMENT_END = "*)"
+_INITIAL_VALUE_PATTERN = r"'(?:[^']|'')*'|[^;]+?"
 _DECLARATION_RE = re.compile(
-    r"^\s*(?P<names>\w+(?:\s*,\s*\w+)*)\s*:\s*(?P<type>[\w\s\[\],.]+?)"
+    r"^\s*(?P<names>\w+(?:\s*,\s*\w+)*)\s*:\s*(?P<type>[\w\s\[\],.-]+?)"
     r"(?:\s+AT\s+(?P<location>[\w\d._%]+))?\s*"
-    r"(?::=\s*(?P<initial_value>[^;]+?))?\s*;\s*"
-    r"(?:\(\*\s*(?P<documentation>.*?)\s*\*\))?\s*$",
+    rf"(?::=\s*(?P<initial_value>{_INITIAL_VALUE_PATTERN}))?\s*;\s*$",
     re.IGNORECASE,
 )
 _ALTERNATE_DECLARATION_RE = re.compile(
     r"^\s*(?P<names>\w+)\s+AT\s+(?P<location>[\w\d._%]+)\s*:\s*"
-    r"(?P<type>[\w\s\[\],.]+?)\s*(?::=\s*(?P<initial_value>[^;]+?))?\s*;\s*"
-    r"(?:\(\*\s*(?P<documentation>.*?)\s*\*\))?\s*$",
+    rf"(?P<type>[\w\s\[\],.-]+?)\s*(?::=\s*(?P<initial_value>{_INITIAL_VALUE_PATTERN}))?\s*;\s*$",
     re.IGNORECASE,
 )
 
@@ -92,15 +93,68 @@ def _global_variable(value: object, index: int) -> VariableInfo:
     }
 
 
+def _split_line(line: str, in_comment: bool) -> tuple[str, list[tuple[int, str]], bool]:
+    """Split one source line into code text, same-line comments, and comment state.
+
+    Comment spans are replaced with same-length spaces so indexes in the code
+    text match the original line. Comment recognition is suppressed inside
+    single-quoted string literals, which do not span lines. Comments do not
+    nest: the first closing marker ends a comment. Only comments that both
+    start and end on this line are reported.
+    """
+    code = list(line)
+    comments: list[tuple[int, str]] = []
+    in_string = False
+    comment_start: int | None = None
+    index = 0
+
+    while index < len(line):
+        if in_comment:
+            end = line.find(_COMMENT_END, index)
+            if end == -1:
+                for position in range(index, len(line)):
+                    code[position] = " "
+                break
+            if comment_start is not None:
+                comments.append((comment_start, line[comment_start + 2 : end]))
+            for position in range(index, end + 2):
+                code[position] = " "
+            index = end + 2
+            in_comment = False
+            comment_start = None
+            continue
+        if in_string:
+            if line.startswith("''", index):
+                index += 2
+            else:
+                if line[index] == "'":
+                    in_string = False
+                index += 1
+            continue
+        if line.startswith(_COMMENT_START, index):
+            in_comment = True
+            comment_start = index
+            code[index] = " "
+            code[index + 1] = " "
+            index += 2
+            continue
+        if line[index] == "'":
+            in_string = True
+        index += 1
+
+    return "".join(code), comments, in_comment
+
+
 def _source_variables(content: str) -> list[VariableInfo]:
     """Extract variables from supported source declaration blocks in declaration order."""
     variables: list[VariableInfo] = []
     current_class: VariableClass | None = None
     block_start_line: int | None = None
+    in_comment = False
 
     for line_number, raw_line in enumerate(content.splitlines(), start=1):
-        line = raw_line.strip()
-        if not line:
+        line, comments, in_comment = _split_line(raw_line, in_comment)
+        if not line.strip():
             continue
 
         block_start = _BLOCK_START_RE.match(line)
@@ -124,7 +178,13 @@ def _source_variables(content: str) -> list[VariableInfo]:
 
         declaration = _DECLARATION_RE.match(line) or _ALTERNATE_DECLARATION_RE.match(line)
         if declaration is None:
-            raise ValueError(f'unrecognized declaration on line {line_number}: "{line}"')
+            raise ValueError(f'unrecognized declaration on line {line_number}: "{raw_line.strip()}"')
+
+        code_end = len(line.rstrip())
+        documentation: str | None = None
+        for start, text in comments:
+            if start >= code_end:
+                documentation = text.strip() or None
 
         location = declaration.group("location")
         initial_value = declaration.group("initial_value")
@@ -137,7 +197,6 @@ def _source_variables(content: str) -> list[VariableInfo]:
                 f'initial value is not allowed for variable class "external" on line {line_number}'
             )
 
-        documentation = declaration.group("documentation")
         for name in declaration.group("names").split(","):
             variables.append(
                 {
@@ -146,7 +205,7 @@ def _source_variables(content: str) -> list[VariableInfo]:
                     "type": declaration.group("type").strip(),
                     "location": location.strip() if location else None,
                     "initial_value": initial_value.strip() if initial_value else None,
-                    "documentation": documentation.strip() if documentation else None,
+                    "documentation": documentation,
                 }
             )
 
