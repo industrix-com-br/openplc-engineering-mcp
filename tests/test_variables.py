@@ -162,6 +162,141 @@ END_FUNCTION_BLOCK
     assert list_variables(str(project), "Motor")[0]["type"] == "ARRAY[0..9] OF INT"
 
 
+def test_list_variables_ignores_var_example_in_leading_documentation(tmp_path: Path) -> None:
+    project = make_source_project(
+        tmp_path / "project",
+        """(* Motor control example:
+VAR
+    Fake : INT := 99;
+END_VAR
+*)
+FUNCTION_BLOCK Motor
+VAR
+    Counter : INT;
+END_VAR
+END_FUNCTION_BLOCK
+""",
+    )
+
+    assert [variable["name"] for variable in list_variables(str(project), "Motor")] == ["Counter"]
+
+
+def test_list_variables_ignores_var_example_in_body_comment(tmp_path: Path) -> None:
+    project = make_source_project(
+        tmp_path / "project",
+        """FUNCTION_BLOCK Motor
+VAR
+    Counter : INT;
+END_VAR
+    (* Reference example:
+    VAR
+    Missing : INT;
+    END_VAR
+    *)
+    Counter := Counter + 1;
+END_FUNCTION_BLOCK
+""",
+    )
+
+    assert [variable["name"] for variable in list_variables(str(project), "Motor")] == ["Counter"]
+
+
+def test_list_variables_ignores_comments_inside_variable_block(tmp_path: Path) -> None:
+    project = make_source_project(
+        tmp_path / "project",
+        """FUNCTION_BLOCK Motor
+VAR
+    (* Counter counts pulses
+       across many shifts *)
+    Counter : INT;
+    Done (* completed flag *) : BOOL;
+END_VAR
+END_FUNCTION_BLOCK
+""",
+    )
+
+    variables = list_variables(str(project), "Motor")
+
+    assert [variable["name"] for variable in variables] == ["Counter", "Done"]
+    assert all(variable["documentation"] is None for variable in variables)
+
+
+def test_list_variables_does_not_treat_string_content_as_comment(tmp_path: Path) -> None:
+    project = make_source_project(
+        tmp_path / "project",
+        """FUNCTION_BLOCK Motor
+VAR
+    Message : STRING := '(* not a comment *)';
+END_VAR
+END_FUNCTION_BLOCK
+""",
+    )
+
+    variable = list_variables(str(project), "Motor")[0]
+
+    assert variable["initial_value"] == "'(* not a comment *)'"
+
+
+def test_list_variables_preserves_string_initial_value_with_semicolon(tmp_path: Path) -> None:
+    project = make_source_project(
+        tmp_path / "project",
+        "FUNCTION_BLOCK Motor\nVAR\n    Message : STRING := 'a;b';\nEND_VAR\nEND_FUNCTION_BLOCK\n",
+    )
+
+    variable = list_variables(str(project), "Motor")[0]
+
+    assert variable["type"] == "STRING"
+    assert variable["initial_value"] == "'a;b'"
+
+
+def test_list_variables_preserves_escaped_quote_in_string_value(tmp_path: Path) -> None:
+    project = make_source_project(
+        tmp_path / "project",
+        "FUNCTION_BLOCK Motor\nVAR\n    Message : STRING := 'it''s; here';\nEND_VAR\nEND_FUNCTION_BLOCK\n",
+    )
+
+    assert list_variables(str(project), "Motor")[0]["initial_value"] == "'it''s; here'"
+
+
+def test_list_variables_preserves_documentation_after_string_value(tmp_path: Path) -> None:
+    project = make_source_project(
+        tmp_path / "project",
+        "FUNCTION_BLOCK Motor\nVAR\n    Message : STRING := 'a;b'; (* Status text *)\nEND_VAR\n"
+        "END_FUNCTION_BLOCK\n",
+    )
+
+    variable = list_variables(str(project), "Motor")[0]
+
+    assert variable["initial_value"] == "'a;b'"
+    assert variable["documentation"] == "Status text"
+
+
+@pytest.mark.parametrize(
+    "declared_type",
+    ["ARRAY[-2..2] OF INT", "ARRAY [-2..2] OF INT"],
+)
+def test_list_variables_preserves_negative_array_bounds(tmp_path: Path, declared_type: str) -> None:
+    project = make_source_project(
+        tmp_path / "project",
+        f"FUNCTION_BLOCK Motor\nVAR\n    Samples : {declared_type};\nEND_VAR\nEND_FUNCTION_BLOCK\n",
+    )
+
+    assert list_variables(str(project), "Motor")[0]["type"] == declared_type
+
+
+def test_list_variables_preserves_negative_array_bounds_with_initial_value(tmp_path: Path) -> None:
+    project = make_source_project(
+        tmp_path / "project",
+        "FUNCTION_BLOCK Motor\nVAR\n    Samples : ARRAY[-2..2] OF INT := [1, 2, 3];\nEND_VAR\n"
+        "END_FUNCTION_BLOCK\n",
+    )
+
+    variable = list_variables(str(project), "Motor")[0]
+
+    assert variable["type"] == "ARRAY[-2..2] OF INT"
+    assert variable["initial_value"] == "[1, 2, 3]"
+
+
 def test_list_variables_returns_empty_list_when_pou_has_no_declarations(tmp_path: Path) -> None:
     project = make_source_project(
         tmp_path / "project",

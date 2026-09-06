@@ -262,6 +262,8 @@ VAR            -> local
 
 The MCP extracts only the declaration information required by its public contract: name, class, declared type, optional location, optional initial value, and optional inline documentation. It preserves declaration order and keeps type and initial-value expressions as strings rather than recreating OpenPLC's internal type model or evaluating IEC literals.
 
+Extraction is comment-aware: `(* ... *)` comments are ignored wherever they appear, so documentation examples cannot introduce declaration blocks or variables, and only a single-line comment trailing a declaration's terminating semicolon is reported as its documentation. The accepted declaration text covers the forms the upstream serializer emits, including negative array bounds (for example `ARRAY [-2..2] OF INT`) and single-quoted string initial values reported verbatim (for example `'a;b'`). This is not a general IEC parser; unsupported declaration text remains a tool error.
+
 The OpenPLC Editor currently allows located declarations in local and global blocks; interface, external, and temporary classes do not carry physical locations. The MCP rejects a located declaration in those classes rather than reporting a misleading representation.
 
 A source POU with no variable blocks returns no variables. If a declaration block cannot be interpreted reliably, the MCP raises a tool error instead of treating the POU as having an empty interface.
