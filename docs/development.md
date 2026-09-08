@@ -32,6 +32,8 @@ The project configuration for dependencies, Ruff, and Pyright is in `pyproject.t
 
 Use `tests/test_server.py` for MCP-level contract coverage through the official SDK's in-memory `Client(mcp)` interface. This verifies tool discovery, annotations, structured content, and tool-error behavior.
 
+`tests/test_stdio_e2e.py` validates the deployable MCP boundary: the SDK launches a separate server process with the current Python interpreter (`-m openplc_engineering_mcp.server`) and communicates over real stdio. It covers initialization, tool discovery, project validation, and a POU read/update/read round trip. SDK context managers own process cleanup, and protocol waits are bounded. This test runs in the normal suite without OpenPLC or `openplc-cli`.
+
 Keep domain implementation behavior close to the implementation modules:
 
 - `tests/test_project.py` for project loading, validation, and structure inspection;
