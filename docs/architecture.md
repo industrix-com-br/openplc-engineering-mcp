@@ -9,6 +9,8 @@ MCP Host / LLM Agent
         v
 OpenPLC Engineering MCP
         |
+        +-- overview.py ---- composition of the inspection modules below
+        |
         +-- project.py ----- current OpenPLC project files
         |
         +-- execution.py --- execution configuration in project.json
@@ -42,12 +44,18 @@ The server provides a small domain-oriented interface between an MCP-compatible 
 Responsible for:
 
 - creating the `MCPServer`;
-- registering the twelve public MCP tools;
+- registering the thirteen public MCP tools;
 - applying tool annotations;
 - exposing the package entry point;
 - starting the stdio server.
 
 It should stay thin. OpenPLC-specific behavior belongs in the `openplc` package.
+
+### `openplc/overview.py`
+
+Composes `get_project_structure`, `list_pous`, `list_datatypes`, `list_global_variables`, `get_execution_configuration`, and, for PLC projects, `get_io_configuration`. It projects names, POU categories, board and mapping count, and recognized artifacts for initial engineering navigation. Physical I/O is `null` for libraries. Parsing, recognition, ordering, and errors remain with the existing readers; no new parser or persistent state is introduced.
+
+`get_project_overview` provides an engineering navigation map; `get_project_structure` provides the selective physical artifact inventory. Detailed inspection remains an explicit subsequent agent choice. See [`tools.md`](tools.md#get_project_overview) for the contract.
 
 ### `openplc/project.py`
 
@@ -132,6 +140,7 @@ A separate CLI abstraction is not needed while compilation is the only feature t
 
 ```text
 server.py
+   ├── openplc.overview
    ├── openplc.project
    ├── openplc.execution
    ├── openplc.io
@@ -140,6 +149,8 @@ server.py
    ├── openplc.datatypes
    └── openplc.compiler
 
+openplc.overview ──► openplc.project, openplc.pous, openplc.datatypes,
+                    openplc.variables, openplc.execution, openplc.io
 openplc.execution ─► openplc.project
 openplc.io ─────────► openplc.project
 openplc.pous ──────► openplc.project

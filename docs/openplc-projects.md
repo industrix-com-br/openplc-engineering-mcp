@@ -39,6 +39,10 @@ Supported project types are:
 
 The supplied path is expanded and resolved before it is returned or used by other operations.
 
+## Engineering overview
+
+`get_project_overview()` composes the existing inspection readers into a concise navigation map of engineering elements. It shares their recognition and parsing limits; it does not interpret the complete OpenPLC schema. Its `files` field reuses the physical inventory below exactly. For libraries, physical I/O is `null`; absent execution configuration produces empty lists. See [`tools.md`](tools.md#get_project_overview) for fields, ordering, and errors.
+
 ## Recognized project layout
 
 `get_project_structure()` always includes `project.json` and includes the following when present:

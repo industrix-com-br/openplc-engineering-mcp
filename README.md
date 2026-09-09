@@ -25,6 +25,7 @@ uv run pytest
 
 ## Current tools
 
+- `get_project_overview`
 - `get_project_structure`
 - `list_pous`
 - `list_datatypes`
@@ -37,6 +38,8 @@ uv run pytest
 - `validate_project`
 - `compile_project`
 - `get_diagnostics`
+
+`get_project_overview` provides an engineering navigation map; `get_project_structure` inventories recognized physical artifacts. Use specialized inspection tools for details.
 
 Inspection tools are read-only. `update_pou` replaces the complete content of one existing Structured Text POU with optimistic-concurrency and atomic-write protection. `compile_project` is a local write operation that requires `openplc-cli` on `PATH`.
 

@@ -2,8 +2,9 @@
 
 ## Current implementation
 
-The project is an early experimental MCP server for local OpenPLC engineering operations. It currently exposes twelve tools:
+The project is an early experimental MCP server for local OpenPLC engineering operations. It currently exposes thirteen tools:
 
+- `get_project_overview` — obtain a concise engineering navigation map before detailed inspection;
 - `get_project_structure` — inspect recognized project files;
 - `list_pous` — discover Programs, Function Blocks, and Functions;
 - `list_datatypes` — inspect project-defined enumerated, structure, and array data types;
@@ -61,7 +62,7 @@ The implementation currently covers:
 
 - local current-format OpenPLC Editor project paths;
 - basic `project.json` metadata preconditions;
-- recognized project-file inspection;
+- concise engineering overview and recognized physical project-file inspection;
 - configured execution Tasks and Program Instances;
 - selected device board and active local `DevicePin` mapping inspection;
 - project-defined data-type inspection from `datatypes/*.dt` files;

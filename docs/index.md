@@ -48,7 +48,7 @@ Load for system boundaries, module responsibilities, dependency direction, and p
 
 ### [`tools.md`](tools.md)
 
-Load for the current twelve MCP tools, inputs, outputs, annotations, errors, and diagnostics behavior.
+Load for the current thirteen MCP tools, inputs, outputs, annotations, errors, and diagnostics behavior.
 
 ### [`openplc-projects.md`](openplc-projects.md)
 
@@ -72,7 +72,8 @@ The implementation is intentionally small and organized by domain responsibility
 
 | File | Responsibility |
 | --- | --- |
-| `src/openplc_engineering_mcp/server.py` | MCP server creation, twelve tool registrations, annotations, and stdio entry point |
+| `src/openplc_engineering_mcp/server.py` | MCP server creation, thirteen tool registrations, annotations, and stdio entry point |
+| `src/openplc_engineering_mcp/openplc/overview.py` | Concise engineering navigation composed from existing inspection operations |
 | `src/openplc_engineering_mcp/openplc/project.py` | Project loading preconditions, shallow validation, parsed-document loading, configuration-resource and structure inspection, and shared source-file scanning |
 | `src/openplc_engineering_mcp/openplc/execution.py` | Task and Program Instance inspection from OpenPLC execution configuration |
 | `src/openplc_engineering_mcp/openplc/io.py` | Active device-board and current local physical I/O mapping inspection |
@@ -81,6 +82,7 @@ The implementation is intentionally small and organized by domain responsibility
 | `src/openplc_engineering_mcp/openplc/datatypes.py` | Project-defined data-type discovery and normalization from current `datatypes/**/*.dt` files |
 | `src/openplc_engineering_mcp/openplc/compiler.py` | `openplc-cli` compilation, JSON output parsing, and process-local diagnostics |
 | `tests/test_server.py` | MCP-level contract tests using the official SDK client |
+| `tests/test_overview.py` | Engineering overview composition, ordering, library behavior, and errors |
 | `tests/test_project.py` | Project behavior tests |
 | `tests/test_execution.py` | Execution configuration behavior tests |
 | `tests/test_io.py` | Physical I/O configuration behavior tests |

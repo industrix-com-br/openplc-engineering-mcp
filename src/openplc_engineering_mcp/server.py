@@ -14,6 +14,8 @@ from openplc_engineering_mcp.openplc.execution import (
 )
 from openplc_engineering_mcp.openplc.io import IOConfiguration
 from openplc_engineering_mcp.openplc.io import get_io_configuration as inspect_io_configuration
+from openplc_engineering_mcp.openplc.overview import ProjectOverview
+from openplc_engineering_mcp.openplc.overview import get_project_overview as inspect_project_overview
 from openplc_engineering_mcp.openplc.pous import PouContent, PouInfo, UpdatePouResult
 from openplc_engineering_mcp.openplc.pous import list_pous as inspect_pous
 from openplc_engineering_mcp.openplc.pous import read_pou as inspect_pou
@@ -28,6 +30,12 @@ from openplc_engineering_mcp.openplc.variables import list_variables as inspect_
 mcp = MCPServer("openplc-engineering")
 _READ_ONLY = ToolAnnotations(read_only_hint=True, open_world_hint=False)
 _LOCAL_WRITE = ToolAnnotations(read_only_hint=False, open_world_hint=False)
+
+
+@mcp.tool(annotations=_READ_ONLY)
+def get_project_overview(project_path: str) -> ProjectOverview:
+    """Return a concise engineering-oriented project overview for navigation and further inspection."""
+    return inspect_project_overview(project_path)
 
 
 @mcp.tool(annotations=_READ_ONLY)

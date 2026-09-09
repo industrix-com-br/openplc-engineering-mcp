@@ -1,6 +1,6 @@
 # MCP tools
 
-The current server registers exactly twelve domain-oriented tools. All tools use `open_world_hint: false`. Inspection and diagnostics tools are read-only; `compile_project` and `update_pou` are registered with `read_only_hint: false`. Compilation may write local build artifacts through the OpenPLC CLI; `update_pou` replaces the persisted content of one existing Structured Text POU.
+The current server registers exactly thirteen domain-oriented tools. All tools use `open_world_hint: false`. Inspection and diagnostics tools are read-only; `compile_project` and `update_pou` are registered with `read_only_hint: false`. Compilation may write local build artifacts through the OpenPLC CLI; `update_pou` replaces the persisted content of one existing Structured Text POU.
 
 The public registrations live in `src/openplc_engineering_mcp/server.py`. OpenPLC behavior is grouped by responsibility under `src/openplc_engineering_mcp/openplc/`.
 
@@ -8,6 +8,7 @@ All project-inspection tools target the **current OpenPLC Editor project format 
 
 | Tool | Read-only | Purpose |
 | --- | --- | --- |
+| `get_project_overview` | yes | Orient further inspection using a concise engineering navigation map |
 | `get_project_structure` | yes | Inspect recognized files in an OpenPLC project |
 | `list_pous` | yes | Discover Programs, Function Blocks, and Functions |
 | `list_datatypes` | yes | Inspect project-defined enumerated, structure, and array data types |
@@ -20,6 +21,33 @@ All project-inspection tools target the **current OpenPLC Editor project format 
 | `validate_project` | yes | Check the MCP's shallow project preconditions |
 | `compile_project` | no | Compile through `openplc-cli` |
 | `get_diagnostics` | yes | Return diagnostics captured from the latest compilation |
+
+## `get_project_overview`
+
+Input: `project_path: str` (required).
+
+Returns a concise engineering navigation map:
+
+```json
+{
+  "name": "Conveyor",
+  "type": "plc-project",
+  "pous": {"programs": ["MAIN"], "function_blocks": ["Motor"], "functions": []},
+  "datatypes": ["MotorState"],
+  "global_variables": ["EmergencyStop"],
+  "execution": {"tasks": ["MainTask"], "program_instances": ["MainInstance"]},
+  "io": {"device_board": "Arduino Uno", "mapping_count": 1},
+  "files": ["datatypes/MotorState.dt", "devices/configuration.json", "devices/pin-mapping.json", "pous/function-blocks/Motor.st", "pous/programs/MAIN.st", "project.json"]
+}
+```
+
+All fields are present. POUs are grouped names from `list_pous`, including its global name deduplication and ordering. Data-type names follow `list_datatypes` order; resource global variable names, Task names and Program Instance names retain their dedicated readers' stored order. `mapping_count` counts the active board's I/O points only. Missing optional collections are empty; a PLC project without explicit board selection uses the existing `OpenPLC Simulator` default. For `plc-library`, `io` is `null` and physical I/O files are not parsed; other summaries follow the same readers, with empty execution collections when configuration is absent.
+
+`files` is exactly the sorted, deduplicated recognized artifact inventory from `get_project_structure`, without its resolved root path. The distinction is intentional: `get_project_overview` answers what engineering elements exist for subsequent navigation, whereas `get_project_structure` inventories their recognized physical representation. Neither is a complete project/schema representation or a generic filesystem browser.
+
+The operation composes existing domain readers and propagates their `ToolError` failures; malformed inspected data fails the call rather than yielding a partial overview. It returns no POU source, variable declarations, data-type definitions, complete mappings, diagnostics, or arbitrary file content. Readers may parse detailed data internally to produce these summaries. Reads are sequential, not an atomic project snapshot.
+
+The agent can use POU names with `read_pou` and `list_variables`, then request `list_datatypes`, `list_global_variables`, `get_execution_configuration`, or `get_io_configuration` for relevant details. Subsequent `update_pou` and `compile_project` calls remain explicit agent decisions. The overview performs no writes or compilation and keeps no active project or cache.
 
 ## `get_project_structure`
 
