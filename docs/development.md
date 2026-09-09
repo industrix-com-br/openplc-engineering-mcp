@@ -36,6 +36,7 @@ Use `tests/test_server.py` for MCP-level contract coverage through the official 
 
 Keep domain implementation behavior close to the implementation modules:
 
+- `tests/test_overview.py` for overview composition, ordering, libraries, and errors;
 - `tests/test_project.py` for project loading, validation, and structure inspection;
 - `tests/test_execution.py` for Task and Program Instance inspection;
 - `tests/test_io.py` for physical I/O configuration inspection;

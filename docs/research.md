@@ -27,7 +27,7 @@ LLM Agent                        LLM Agent
 
 The baseline requires the agent to understand project paths, representations, commands, and tool-specific details directly.
 
-The MCP approach exposes PLC engineering concepts and encapsulates lower-level implementation details.
+The MCP approach exposes PLC engineering concepts and encapsulates lower-level implementation details. `get_project_overview` supplies an initial engineering navigation map, while `get_project_structure` inventories recognized physical artifacts. This reduces the need to reconstruct initial project organization at the interface level; whether it yields measurable advantages remains an experimental question.
 
 ## Research question
 

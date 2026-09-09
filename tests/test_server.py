@@ -33,7 +33,7 @@ async def client():
 
 @pytest.mark.anyio
 async def test_server_and_tools_are_discoverable(client: Client) -> None:
-    """The server lists exactly the twelve domain tools with correct annotations."""
+    """The server lists exactly the thirteen domain tools with correct annotations."""
     assert isinstance(mcp, MCPServer)
     listed = await client.list_tools()
     tools = {tool.name: tool for tool in listed.tools}
@@ -42,6 +42,7 @@ async def test_server_and_tools_are_discoverable(client: Client) -> None:
         "get_diagnostics",
         "get_execution_configuration",
         "get_io_configuration",
+        "get_project_overview",
         "get_project_structure",
         "list_datatypes",
         "list_global_variables",
@@ -536,3 +537,46 @@ async def test_tool_errors_are_exposed_through_mcp(client: Client, tmp_path: Pat
 
     assert result.is_error
     assert "does not exist" in tool_text(result)
+
+
+@pytest.mark.anyio
+async def test_overview_schema_and_content(client: Client, tmp_path: Path) -> None:
+    listed = await client.list_tools()
+    tool = next(tool for tool in listed.tools if tool.name == "get_project_overview")
+    assert set(tool.input_schema["properties"]) == {"project_path"}
+    assert tool.input_schema["properties"]["project_path"]["type"] == "string"
+    assert tool.input_schema["required"] == ["project_path"]
+    assert tool.output_schema is not None
+    assert set(tool.output_schema["required"]) == {
+        "name",
+        "type",
+        "pous",
+        "datatypes",
+        "global_variables",
+        "execution",
+        "io",
+        "files",
+    }
+    (tmp_path / "project.json").write_text(
+        json.dumps({"meta": {"name": "Minimal", "type": "plc-library"}}), encoding="utf-8"
+    )
+    result = await client.call_tool("get_project_overview", {"project_path": str(tmp_path)})
+    assert not result.is_error
+    assert result.structured_content == {
+        "name": "Minimal",
+        "type": "plc-library",
+        "pous": {"programs": [], "function_blocks": [], "functions": []},
+        "datatypes": [],
+        "global_variables": [],
+        "execution": {"tasks": [], "program_instances": []},
+        "io": None,
+        "files": ["project.json"],
+    }
+
+
+@pytest.mark.anyio
+async def test_overview_domain_error(client: Client, tmp_path: Path) -> None:
+    (tmp_path / "project.json").write_text("{", encoding="utf-8")
+    result = await client.call_tool("get_project_overview", {"project_path": str(tmp_path)})
+    assert result.is_error
+    assert "project.json is not valid JSON" in tool_text(result)
